@@ -22,7 +22,19 @@ def dirList(directory, ext=""):
 def removeExt(fp):
     return(os.path.splitext(fp)[0])
 
+def getExtension(fp): # returns as '.ext'
+    return(os.path.splitext(fp)[1])
+
 def getFileName(fp,rmExt=True):
     base=os.path.basename(fp)
     if rmExt: return(removeExt(base))
     return(base)
+
+def readFloats(fp):
+    with open(fp) as f:
+        return [float(x) for x in f]
+
+def readIntFloats(fp):
+    with open(fp) as f:
+        lines = (line.split('\t') for line in f)
+        return dict((int(k), float(v)) for k, v in lines)        
