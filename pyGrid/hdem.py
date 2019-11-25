@@ -3,6 +3,9 @@ import os
 import struct
 from pymmio import files
 from pyGrid.definition import gdef
+import sys
+sys.setrecursionlimit(2000)
+
 
 class tec:
     def __init__(self, x, y, z, gradient, aspect):
@@ -16,6 +19,7 @@ class hdem:
     gd = gdef
     tem = None
     fp = None
+    us = None
 
     def __init__(self, filepath):        
         gdfp = filepath+".gdef" # files.removeExt(filepath)+".gdef"
@@ -71,3 +75,27 @@ class hdem:
         except Exception as err:
             print('error reading hdem file:',filepath,'\n',err)
             quit()
+
+    def BuildUpslopes(self):
+        print('  building upslopes..')
+        self.us = dict()
+        for fid,tids in self.fp.items():
+            for tid in tids.keys():
+                if tid in self.us:
+                    self.us[tid].append(fid)
+                else:
+                    self.us[tid]=[fid]
+
+    def Climb(self,cid):
+        # NOTE: recursion not well suited to python !!!!!!!!!!!!!!
+        if self.us==None: self.BuildUpslopes()
+        sColl = set()
+        def pclimb(cid):
+            sColl.add(cid)
+            if cid in self.us:
+                for u in self.us[cid]:
+                    if u in sColl: continue                
+                    pclimb(u)
+        pclimb(cid)
+        return(list(sColl))
+
