@@ -269,11 +269,14 @@ class Met:
 
 	def getLocations(self, br, rec):
 		if self.lc == 1:
-			a = np.zeros((self.nloc,1),type=int)
-			for i in range(self.nloc):
-				a[i,0] = struct.unpack('<i', br.read(4))[0] # id
-				rec += 4
-			self.dfloc = pd.DataFrame(a, columns=['id'])
+			if self.nloc==1:
+				self.dfloc = struct.unpack('<i', br.read(4))[0] # id
+			else:
+				a = np.zeros((self.nloc,1),type=int)
+				for i in range(self.nloc):
+					a[i,0] = struct.unpack('<i', br.read(4))[0] # id
+					rec += 4
+				self.dfloc = pd.DataFrame(a, columns=['id'])
 			# self.dfloc['id'] = self.dfloc['id'].astype(int)	
 		elif self.lc == 2:
 			a = np.zeros((self.nloc,2),type=int)
