@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import griddata
 import math
 from bitarray import bitarray
-import mmio.bitarray as bt
+import pymmio.bitarray as bt
 from tqdm import tqdm
 
 

@@ -26,7 +26,7 @@ class Met:
 	# dfloc = pd.DataFrame()
 	# dftem = pd.DataFrame()
 
-	def __init__(self, fp=None, print=True):
+	def __init__(self, fp=None, printout=True):
 		if fp is None: return
 		# print(' loading', fp)
 		with open(fp, "rb") as f:
@@ -51,7 +51,7 @@ class Met:
 			self.nloc = struct.unpack('<I', f.read(4))[0] # number of locations in following location table			
 
 			# print info
-			if print: self.Info()
+			if printout: self.Info()
 
 			# get locations
 			if self.lc > 0: rec = self.getLocations(f,rec) 
@@ -65,6 +65,7 @@ class Met:
 				# get data
 				nvar = len(self.wbc.dts)
 				if self.intvl > 0:
+					if nvar==0: print("nvar==0 supported") # todo
 					print(self.dtb.strftime('%Y-%m-%d %H:%M:%S') + " to " + self.dte.strftime('%Y-%m-%d %H:%M:%S'), end=" >> ")				
 					if self.lc==0: # gridded data
 						if self.prcn == 4:
@@ -86,15 +87,25 @@ class Met:
 						cols = self.wbc.dts
 						dicC = {}
 						pbar = tqdm(total=int((self.dte - self.dtb).days*86400/self.intvl)+1)
-						for dt in self.yielddates():
-							pbar.update()
-							pbar.set_description(dt.strftime(' %Y-%m-%d %H:%M:%S'))
-							a = struct.unpack('<' + fmt*self.nloc, f.read(self.prcn*nvar*self.nloc))
-							a = np.reshape(a, (-1,nvar))
-							p = pd.DataFrame(a, columns=cols)
-							dicC[dt] = p
-						pbar.close()
-						self.dftem = dicC
+						if self.nloc==1:
+							for dt in self.yielddates():
+								pbar.update()
+								pbar.set_description(dt.strftime(' %Y-%m-%d %H:%M:%S'))
+								a = struct.unpack('<' + fmt, f.read(self.prcn*nvar))
+								a = np.reshape(a, (-1,nvar))
+								dicC[dt] = a[0]
+							pbar.close()
+							self.dftem = pd.DataFrame.from_dict(dicC, orient='index', columns=cols)
+						else:
+							for dt in self.yielddates():
+								pbar.update()
+								pbar.set_description(dt.strftime(' %Y-%m-%d %H:%M:%S'))
+								a = struct.unpack('<' + fmt*self.nloc, f.read(self.prcn*nvar*self.nloc))
+								a = np.reshape(a, (-1,nvar))
+								p = pd.DataFrame(a, columns=cols)
+								dicC[dt] = p
+							pbar.close()
+							self.dftem = dicC
 					else:
 						if self.prcn == 2:
 							fmt = 'e'*nvar
@@ -201,7 +212,9 @@ class Met:
 		print('  time code', self.tc)
 		if len(self.wbc.dts) > 0:
 			print('  waterbalance code', self.wbc.wbc)
-			print('  waterbalance list', self.wbc.dts)
+			print('  waterbalance list')
+			for u in self.wbc.dts:
+				print('    '+u)
 		print('  precision', self.prcn)		
 		if self.intvl > 0:
 			print('  interval', self.intvl)
@@ -279,7 +292,7 @@ class Met:
 				self.dfloc = pd.DataFrame(a, columns=['id'])
 			# self.dfloc['id'] = self.dfloc['id'].astype(int)	
 		elif self.lc == 2:
-			a = np.zeros((self.nloc,2),type=int)
+			a = np.zeros((self.nloc,2),dtype=int)
 			for i in range(self.nloc):
 				a[i,0] = struct.unpack('<i', br.read(4))[0] # row
 				a[i,1] = struct.unpack('<i', br.read(4))[0] # col
