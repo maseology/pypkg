@@ -1,5 +1,5 @@
 
-import os
+import os, shutil
 
 def mkDir(path):
     try:
@@ -12,12 +12,15 @@ def mkDir(path):
 def dirList(directory, ext=""):
     lst = list()
     for filename in os.listdir(directory):
-        if len(ext) > 0:            
+        if len(ext) > 0:
             if filename.endswith(ext): 
                 lst.append(os.path.join(directory, filename))
         else: 
             lst.append(os.path.join(directory, filename))
     return(lst)
+
+def deleteDir(directory):
+    shutil.rmtree(directory)
 
 def removeExt(fp):
     return(os.path.splitext(fp)[0])
