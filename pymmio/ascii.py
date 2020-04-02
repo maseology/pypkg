@@ -1,6 +1,14 @@
 
 import csv
 
+def readLines(filepath):
+    lout = list()
+    with open(filepath) as f:
+        for ln in f.read().splitlines():
+            if len(ln) == 0: continue
+            lout.append(ln.strip())
+    return(lout)
+
 def readCSV(filepath):
     with open(filepath) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')

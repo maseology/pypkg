@@ -33,6 +33,9 @@ def getFileName(fp,rmExt=True):
     if rmExt: return(removeExt(base))
     return(base)
 
+def getFileDir(fp):
+    return os.path.dirname(os.path.realpath(fp))
+
 def readFloats(fp):
     with open(fp) as f:
         return [float(x) for x in f]
