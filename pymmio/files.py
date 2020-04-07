@@ -2,6 +2,7 @@
 import os, shutil
 
 def mkDir(path):
+    if os.path.isdir(path): return
     try:
         os.mkdir(path)
     except OSError:
