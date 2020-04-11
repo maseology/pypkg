@@ -8,7 +8,7 @@ def mkDir(path):
     except OSError:
         print ("Creation of the directory %s failed" % path)
     else:
-        print ("Successfully created the directory %s " % path)
+        print (" Successfully created the directory %s " % path)
 
 def dirList(directory, ext=""):
     lst = list()

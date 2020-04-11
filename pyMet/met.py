@@ -128,7 +128,7 @@ class Met:
 						# 	p.set_index('id', inplace=True)
 						# 	dicC[dt] = p
 						self.dftem = pd.DataFrame.from_dict(dicC, "index", columns=cols)
-					print('complete')					
+					# print('complete')				
 				elif nvar==0:
 					if self.prcn != 8 and self.prcn != 4: quit() # todo				
 					dicC = {}

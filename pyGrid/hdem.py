@@ -4,7 +4,7 @@ import struct
 from pymmio import files
 from pyGrid.definition import gdef
 import sys
-sys.setrecursionlimit(2000)
+sys.setrecursionlimit(10**5)
 
 
 class tec:
@@ -15,7 +15,7 @@ class tec:
         self.g = gradient
         self.a = aspect
 
-class hdem:
+class HDEM:
     gd = gdef
     tem = None
     fp = None
@@ -99,3 +99,6 @@ class hdem:
         pclimb(cid)
         return(list(sColl))
 
+    def CatchmentArea(self,cid):
+        lst = self.Climb(cid)
+        return self.gd.cs*self.gd.cs*len(lst)
