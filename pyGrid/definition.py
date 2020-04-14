@@ -8,7 +8,7 @@ import pymmio.bitarray as bt
 from tqdm import tqdm
 
 
-class gdef:
+class GDEF:
     pass
 
     def __init__(self, filepath):
