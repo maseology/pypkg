@@ -140,7 +140,6 @@ class gdef:
         return dout # pointID{cellID}
 
     ### IMPORT
-
     def LoadBinary(self,fp):
         try:
             return np.fromfile(fp,float).reshape((self.nrow,self.ncol))

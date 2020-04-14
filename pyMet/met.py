@@ -26,7 +26,7 @@ class Met:
 	# dfloc = pd.DataFrame()
 	# dftem = pd.DataFrame()
 
-	def __init__(self, fp=None, printout=True):
+	def __init__(self, fp=None, printout=True, skipdata=False):
 		if fp is None: return
 		# print(' loading', fp)
 		with open(fp, "rb") as f:
@@ -56,6 +56,7 @@ class Met:
 			# get locations
 			if self.lc > 0: rec = self.getLocations(f,rec) 
 
+			if skipdata: return
 			if os.stat(fp).st_size > 10000000000:
 				self.rec = rec
 				self.dti = 0
@@ -112,22 +113,39 @@ class Met:
 						elif self.prcn == 4: 
 							fmt = 'f'*nvar
 						elif self.prcn == 8: 
-							fmt = 'd'*nvar	
+							fmt = 'd'*nvar
 						else:
 							print("precicion not supported") # todo					
 						cols = self.wbc.dts
 						dicC = {}
-						for dt in self.yielddates():
-							a = struct.unpack('<' + fmt, f.read((self.prcn*nvar)))
-							dicC[dt] = a
-						# for dt in self.yielddates(): # lc<0
-						# 	nloc = struct.unpack('<I', f.read(4))[0]						
-						# 	a = struct.unpack('<' + fmt*nloc, f.read((4+8*nvar)*nloc))
-						# 	a = np.reshape(a, (-1,nvar+1))
-						# 	p = pd.DataFrame(a, columns=cols)
-						# 	p.set_index('id', inplace=True)
-						# 	dicC[dt] = p
-						self.dftem = pd.DataFrame.from_dict(dicC, "index", columns=cols)
+						if self.nloc == 1:
+							for dt in self.yielddates():
+								a = struct.unpack('<' + fmt, f.read((self.prcn*nvar)))
+								dicC[dt] = a
+							# for dt in self.yielddates(): # lc<0
+							# 	nloc = struct.unpack('<I', f.read(4))[0]						
+							# 	a = struct.unpack('<' + fmt*nloc, f.read((4+8*nvar)*nloc))
+							# 	a = np.reshape(a, (-1,nvar+1))
+							# 	p = pd.DataFrame(a, columns=cols)
+							# 	p.set_index('id', inplace=True)
+							# 	dicC[dt] = p
+							self.dftem = pd.DataFrame.from_dict(dicC, "index", columns=cols)
+						elif self.nloc > 1:
+							print()
+							pbar = tqdm(total=int((self.dte - self.dtb).days*86400/self.intvl)+1)
+							for dt in self.yielddates():
+								pbar.update()
+								pbar.set_description(dt.strftime(' %Y-%m-%d %H:%M:%S'))
+								a = struct.unpack('<' + fmt*self.nloc, f.read((self.prcn*nvar*self.nloc)))
+								a = np.reshape(a, (-1,nvar))
+								p = pd.DataFrame(a, columns=cols)
+								print(p)
+								dicC[dt] = p
+							pbar.close()
+							self.dftem = dicC
+						else:
+							print('met.py TODO: unsupported location code (not sure this should occur??)')
+							quit()
 					# print('complete')				
 				elif nvar==0:
 					if self.prcn != 8 and self.prcn != 4: quit() # todo				
