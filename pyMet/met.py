@@ -26,7 +26,7 @@ class Met:
 	# dfloc = pd.DataFrame()
 	# dftem = pd.DataFrame()
 
-	def __init__(self, fp=None, printout=True, skipdata=False):
+	def __init__(self, fp=None, printout=True, skipdata=True):
 		if fp is None: return
 		# print(' loading', fp)
 		with open(fp, "rb") as f:
