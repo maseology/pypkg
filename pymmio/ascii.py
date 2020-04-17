@@ -24,3 +24,8 @@ def readCSV(filepath):
                 line_count += 1
         # print(f'Processed {line_count} lines.')
         return(lout)
+
+def writeLines(fp,lns):
+    with open(fp, 'w') as f:
+        for ln in lns:
+            f.write('{}\n'.format(ln))
