@@ -56,7 +56,9 @@ class Met:
 			# get locations
 			if self.lc > 0: rec = self.getLocations(f,rec) 
 
-			if skipdata: return
+			if skipdata: 
+				print(' ** skipping data read **\n')
+				return
 			if os.stat(fp).st_size > 10000000000:
 				self.rec = rec
 				self.dti = 0
@@ -341,6 +343,7 @@ class Met:
 		if self.espg != 26917:
 			outProj = pyproj.Proj(init='epsg:26917')
 			if self.espg == 3857 or self.espg == 4326: # in earlier cases, ESPG was incorrectly set to WGS84 pseudo mercator, and not WGS84 proper
+				# Note 3857 is the web mercator
 				inProj = pyproj.Proj(init='epsg:4326')
 				# def rule(row):
 				# 	re, rn, d1, d2 = utm.from_latlon(row['YN'],row['XE'])
@@ -404,8 +407,7 @@ class Met:
 								f.write(struct.pack('<'+fmt, *a))
 							elif self.prcn == 8:
 								fmt = 'd'*len(a)
-								f.write(struct.pack('<'+fmt, *a))
-								pass
+								f.write(struct.pack('<'+fmt, *a))								
 							else:
 								print('TODO')
 								quit()		
