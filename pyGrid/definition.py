@@ -2,7 +2,7 @@
 from scipy import spatial
 import numpy as np
 from scipy.interpolate import griddata
-import math
+import math, itertools
 from bitarray import bitarray
 import pymmio.bitarray as bt
 from tqdm import tqdm
@@ -76,10 +76,12 @@ class GDEF:
 
     def build(self):         
         if self.active:
-            self.ncell = np.sum(self.act)
-            a = np.empty((self.nrow,self.ncol),dtype=int)
-            a[self.act] = np.arange(0,self.ncell,1)
-            self.rcc = a # row-col to active cell id            
+            self.ncell = np.sum(self.act) # n actives
+            a = np.arange(self.nrow*self.ncol,dtype=int).reshape(self.nrow,self.ncol)
+            # a = np.full((self.nrow,self.ncol),-1,dtype=int)
+            # a[self.act] = np.arange(0,self.ncell,1)
+            a[self.act==False] = -1
+            self.rcc = a # row-col to (zero-based) active cell id          
         else:
             self.rcc = np.arange(0,self.nrow*self.ncol,1).reshape((self.nrow,self.ncol)) # row-col to cell id 
             self.ncell = self.nrow*self.ncol
@@ -110,6 +112,34 @@ class GDEF:
         #         cid+=1
         # self.ncell=cid
 
+    def CellID(self,ir,jc):
+        return ir * self.ncol + jc
+
+    def RowCol(self,cid):        
+        if cid < 0 or cid > self.nrow * self.ncol - 1: return
+        i = int(cid/self.ncol)
+        j = cid - i*self.ncol
+        return (i,j)
+
+    def Actives(self):
+        return list(itertools.chain(*self.act)) # list of boolean
+
+    def CellLeft(self,ir,jc):
+        if self.rot != 0.0: print("definition.CellLeft error")
+        return self.cco[ir][jc][0] - self.cs/2.0
+
+    def CellRight(self,ir,jc):
+        if self.rot != 0.0: print("definition.CellRight error")
+        return self.cco[ir][jc][0] + self.cs/2.0
+
+    def CellTop(self,ir,jc):
+        if self.rot != 0.0: print("definition.CellTop error")
+        return self.cco[ir][jc][1] + self.cs/2.0
+
+    def CellBottom(self,ir,jc):
+        if self.rot != 0.0: print("definition.CellBottom error")
+        return self.cco[ir][jc][1] - self.cs/2.0     
+
     def pointToRowCol(self,xy):
         # xy: tuple
         if self.rot != 0: pass # TODO: rotate point like p.Rotate(_rotation, New Cartesian.XY(_origin.X, _origin.Y), True)
@@ -138,6 +168,30 @@ class GDEF:
             p = self.pointToRowCol(v)
             if p is not None: dout[k] = self.rcc[p] # != (-1,-1)
         return dout # pointID{cellID}
+
+    def adjacentCells(self):
+        d = dict()
+        act = self.Actives()
+        for cid in range(self.ncol*self.nrow):
+            if not act[cid]: continue
+            l = list()
+            t = self.RowCol(cid)
+            ir = t[0]
+            jc = t[1]
+            if jc > 0: 
+                cid2 = self.CellID(ir,jc-1)
+                if act[cid2]: l.append(cid2)
+            if jc < self.ncol-1: 
+                cid2 = self.CellID(ir,jc+1)
+                if act[cid2]: l.append(cid2)
+            if ir > 0: 
+                cid2 = self.CellID(ir-1,jc)
+                if act[cid2]: l.append(cid2)
+            if ir < self.nrow-1: 
+                cid2 = self.CellID(ir+1,jc)
+                if act[cid2]: l.append(cid2)
+            d[cid] = l
+        return d
 
     ### IMPORT
     def LoadBinary(self,fp):

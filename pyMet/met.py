@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from scipy.interpolate import griddata
 import pyproj
+from timeit import default_timer as timer
 from pyMet import wbcode
 from tqdm import tqdm
 
@@ -71,14 +72,14 @@ class Met:
                     if nvar==0: 
                         print("nvar==0 not supported") # todo
                         quit()
-                    print(self.dtb.strftime('%Y-%m-%d %H:%M:%S') + " to " + self.dte.strftime('%Y-%m-%d %H:%M:%S'), end=" >> ")                
+                    print('  ' + self.dtb.strftime('%Y-%m-%d %H:%M:%S') + " to " + self.dte.strftime('%Y-%m-%d %H:%M:%S'), end=" >> ")                
                     if self.lc==0: # gridded data
                         if self.prcn == 4:
                             a = np.frombuffer(f.read(os.path.getsize(fp)-rec), dtype=np.single)
                         elif self.prcn == 8:
                             a = np.frombuffer(f.read(os.path.getsize(fp)-rec))
                         else:
-                            print("precicion not supported") # todo
+                            print("precision not supported") # todo
                         self.dftem = np.reshape(a, (-1,self.nloc,nvar))
                     elif self.lc==1:
                         if self.prcn == 2:
@@ -88,7 +89,7 @@ class Met:
                         elif self.prcn == 8: 
                             fmt = 'd'*nvar    
                         else:
-                            print("precicion not supported") # todo
+                            print("precision not supported") # todo
                         cols = self.wbc.dts
                         dicC = {}
                         pbar = tqdm(total=int((self.dte - self.dtb).days*86400/self.intvl)+1)
@@ -115,11 +116,11 @@ class Met:
                         if self.prcn == 2:
                             fmt = 'e'*nvar
                         elif self.prcn == 4: 
-                            fmt = 'f'*nvar
+                            fmt = 'f'*nvar 
                         elif self.prcn == 8: 
                             fmt = 'd'*nvar
                         else:
-                            print("precicion not supported") # todo                    
+                            print("precision not supported") # todo                    
                         cols = self.wbc.dts
                         dicC = {}
                         if self.nloc == 1:
@@ -135,16 +136,50 @@ class Met:
                             #     dicC[dt] = p
                             self.dftem = pd.DataFrame.from_dict(dicC, "index", columns=cols)
                         elif self.nloc > 1:
-                            print()
-                            pbar = tqdm(total=int((self.dte - self.dtb).days*86400/self.intvl)+1)
-                            for dt in self.yielddates():
+
+                            # # version 1: dict{date: df of station values}
+                            # print()
+                            # pbar = tqdm(total=int((self.dte - self.dtb).days*86400/self.intvl)+1)
+                            # for dt in self.yielddates():
+                            #     pbar.update()
+                            #     pbar.set_description(dt.strftime(' %Y-%m-%d %H:%M:%S'))
+                            #     a = struct.unpack('<' + fmt*self.nloc, f.read((self.prcn*nvar*self.nloc)))
+                            #     a = np.reshape(a, (-1,nvar))
+                            #     p = pd.DataFrame(a, columns=cols)
+                            #     dicC[dt] = p   
+                            # pbar.close()
+
+                            # version 2.2
+                            b0 = timer()
+                            nstp = int((self.dte - self.dtb).days)+1
+                            xr = self.dfloc.to_dict()['id']
+                            dts = pd.Index(self.yielddates())
+                            a = struct.unpack('<' + fmt*self.nloc*nstp, f.read((self.prcn*nvar*self.nloc*nstp)))
+                            a = np.reshape(a, (-1,nvar))
+                            df = pd.DataFrame(a, columns=cols)
+                            df['sid'] = np.tile(list(xr.values()), len(df.index)//len(list(xr.values())))
+                            grp = df.groupby(df.sid)
+                            endtime = str(timedelta(seconds=round(timer() - b0,0)))
+                            print('temporal data loaded in: ' + endtime)
+
+                            pbar = tqdm(total=len(xr),desc='reordering')
+                            for i in xr.values():
+                                # v1 # fastest, but returns SettingWithCopyWarning
+                                ddf = grp.get_group(i)
+                                # ddf['date'] = dts
+                                # ddf = ddf.set_index('date').drop('sid', 1)
+                                ddf = ddf.set_index(dts).drop('sid', 1)
+
+                                # # v2 # slower, but avoids SettingWithCopyWarning warning
+                                # ddf = grp.get_group(i)
+                                # ddf.index = dts
+                                # ddf = ddf.drop('sid', 1)
+
+                                # # v3 # slowest, but avoids SettingWithCopyWarning warning
+                                # ddf = pd.DataFrame(data=grp.get_group(i), index=dts) 
+                                
+                                dicC[i] = ddf
                                 pbar.update()
-                                pbar.set_description(dt.strftime(' %Y-%m-%d %H:%M:%S'))
-                                a = struct.unpack('<' + fmt*self.nloc, f.read((self.prcn*nvar*self.nloc)))
-                                a = np.reshape(a, (-1,nvar))
-                                p = pd.DataFrame(a, columns=cols)
-                                print(p)
-                                dicC[dt] = p
                             pbar.close()
                             self.dftem = dicC
                         else:

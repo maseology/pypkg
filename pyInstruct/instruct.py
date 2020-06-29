@@ -2,7 +2,7 @@
 import re, json
 from pymmio import ascii, files
 
-# pyInstruct is a set of general routines built to read instruction files for a varaiety model build proceedures
+# pyInstruct is a set of general routines built to read instruction files for a variety model build procedures
 
 class build():
     desc = ""
@@ -11,6 +11,7 @@ class build():
 
     def __init__(self, filepath):
         self.__read(filepath)
+        self.params =  {k.lower(): v for k, v in self.params.items()} # converting all to lower case        
 
     def __read(self, fp):
         print("\nReading: " + fp + " ...\n")
@@ -72,7 +73,7 @@ class build():
                 return splitline[0], True
             elif splitline[1].lower() in ['false']:
                 return splitline[0], False
-            elif splitline[1][0]=='{':
+            elif splitline[1][0]=='{' or splitline[1][0]=='[':
                 if splitline[1].find(":")>-1:
                     return splitline[0], json.load(splitline[1])
                 else:
@@ -91,11 +92,17 @@ class build():
         else:
             return splitline[0], splitline[1:]
 
-    def print(self):
-        print(" " + '='*(13 + len(self.desc)))
-        print(" Description: " + self.desc)
-        print(" " + '='*(13 + len(self.desc)))
-        print(" Parameters:")
+    def FilePath(self,parnam):
+        return self.root + self.params[parnam]
+
+    def print(self):        
+        if len(self.desc) == 0: 
+            print('='*17 + " MODFLOW6 builder")
+        else:
+            print(" " + '='*(13 + len(self.desc)))
+            print(" Description: " + self.desc)
+            print(" " + '='*(13 + len(self.desc)))
+        print() #" Parameters:")
         for k,v in self.params.items():
             if type(v) is dict:
                 print("   {}:".format(k))
@@ -103,3 +110,4 @@ class build():
                     print("     {}: {}".format(k1,v1))
             else:
                 print("   {}:\t{}".format(k,v))
+        print()

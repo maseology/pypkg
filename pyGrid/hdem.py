@@ -2,7 +2,7 @@
 import os
 import struct
 from pymmio import files
-from pyGrid.definition import gdef
+from pyGrid.definition import GDEF
 import sys
 sys.setrecursionlimit(10**5)
 
@@ -16,12 +16,12 @@ class tec:
         self.a = aspect
 
 class HDEM:
-    gd = gdef
+    gd = GDEF
     tem = None
     fp = None
     us = None
 
-    def __init__(self, filepath):        
+    def __init__(self, filepath, skipflowpaths=False):        
         gdfp = filepath+".gdef" # files.removeExt(filepath)+".gdef"
         if not os.path.exists(gdfp):
             print('error no grid definition file available: ',gdfp,'\n')
@@ -30,11 +30,11 @@ class HDEM:
             print("error: only .uhdem's supported ',filepath,'\n")
             quit()
 
-        self.gd = gdef(gdfp)
+        self.gd = GDEF(gdfp)
         print(' loading', filepath)
-        self.loadUHDEM(filepath)       
+        self.__loadUHDEM(filepath,skipflowpaths)       
 
-    def loadUHDEM(self,filepath):
+    def __loadUHDEM(self,filepath,skipflowpaths):
         # THIS IS VERY SLOW!!!!
         try:
             with open(filepath, 'rb') as f:
@@ -51,6 +51,7 @@ class HDEM:
                 ttt = [i for i in zip(*[iter(tta)]*6)] # convering long list to list of tuples. see: https://stackoverflow.com/questions/23286254/convert-list-to-a-list-of-tuples-python
                 self.tem = {k:tec(x,y,z,g,a) for k,x,y,z,g,a in ttt}
 
+                if skipflowpaths: return
                 try:
                     nfp = struct.unpack('<i', f.read(4))[0]  
                     print('  reading flowpaths..')                
