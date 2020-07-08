@@ -7,15 +7,20 @@ from pymmio import ascii, files
 class build():
     desc = ""
     root = ""
+    nam = ""
     params = dict()
 
     def __init__(self, filepath):
         self.__read(filepath)
-        self.params =  {k.lower(): v for k, v in self.params.items()} # converting all to lower case        
+        self.params =  {k.lower(): v for k, v in self.params.items()} # converting all to lower case
+        for k, v in self.params.items():
+            if type(v) == dict:
+                   self.params[k] =  {kk.lower(): vv for kk, vv in v.items()} # converting all to lower case
 
     def __read(self, fp):
         print("\nReading: " + fp + " ...\n")
         self.root = files.getFileDir(fp) + '\\'
+        self.nam = files.getFileName(fp)
         ss = ""
         skip = False
         for ln in ascii.readLines(fp):
