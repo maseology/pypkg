@@ -273,6 +273,9 @@ class GDEF:
                         a[self.act].tofile(fout)
                     pbar.close()
             elif isinstance(dat,np.ndarray):
-                dat[self.act].tofile(fp)
+                if dat.size == self.ncell:
+                    dat.tofile(fp)
+                else:
+                    dat[self.act].tofile(fp)
             else:
                 print(' gdef.printActives does not support type: ' + str(type(dat)))

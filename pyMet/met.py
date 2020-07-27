@@ -60,11 +60,12 @@ class Met:
             if skipdata: 
                 print(' ** skipping data read **\n')
                 return
-            if os.stat(fp).st_size > 10000000000:
+            if os.stat(fp).st_size > 14000000000: #10000000000:
                 self.rec = rec
                 self.dti = 0
                 self.f = open(fp, "rb")
                 self.f.read(rec)
+                print('  ** ERROR (met.py line 68): .met file too large for reading [{}]'.format(os.stat(fp).st_size))
             else:
                 # get data
                 nvar = len(self.wbc.dts)
@@ -74,6 +75,7 @@ class Met:
                         quit()
                     print('  ' + self.dtb.strftime('%Y-%m-%d %H:%M:%S') + " to " + self.dte.strftime('%Y-%m-%d %H:%M:%S'), end=" >> ")                
                     if self.lc==0: # gridded data
+                        b0 = timer()
                         if self.prcn == 4:
                             a = np.frombuffer(f.read(os.path.getsize(fp)-rec), dtype=np.single)
                         elif self.prcn == 8:
@@ -81,6 +83,7 @@ class Met:
                         else:
                             print("precision not supported") # todo
                         self.dftem = np.reshape(a, (-1,self.nloc,nvar))
+                        print('grid [shape = {}] data loaded in: {}'.format(self.dftem.shape,timedelta(seconds=round(timer() - b0,0))))
                     elif self.lc==1:
                         if self.prcn == 2:
                             fmt = 'e'*nvar
@@ -553,3 +556,7 @@ class Met:
         grid_x, grid_y = gd.nullMgrid()
         a = griddata(np.array(list(d.keys())), np.array(list(d.values())), (grid_x, grid_y), method=method) # 'nearest' 'linear' 'cubic'
         return(a.T)
+
+
+    def Averages(self):
+        return self.dftem.mean(axis=0).T
