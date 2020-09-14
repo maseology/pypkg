@@ -4,7 +4,7 @@ import numpy as np
 from pymmio import files as mmio
 from pyGrid.definition import GDEF
 
-class indx:
+class INDX:
     gd = None
     a = None
 

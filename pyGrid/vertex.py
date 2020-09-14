@@ -73,23 +73,45 @@ class VDEF:
 
     def RemoveCells(self,cells):
         if type(cells) is int: cells = [cells]
-        nrem = list() # nodes to be removed
-        for cid in cells:
-            if not cid in self.cellnodes: continue
-            nrem.extend(self.cellnodes[cid])
-            del self.cellnodes[cid]
 
-        rem2 = list()
-        for nid in list(set(nrem)):
-            lst = list()
-            for cid in self.nodecells[nid]:
-                if cid in cells:
-                    lst.append(-1)
-                else:
-                    lst.append(cid)
-            
-            if len(lst) == 0 or all(cid == -1 for cid in lst): rem2.append(nid)
+        def f0(cid):
+            if cid in self.cellnodes:
+                l = self.cellnodes[cid]
+                del self.cellnodes[cid]
+                return l
+
+        nrem = list(map(f0,cells))
+        nrem = [item for sublist in nrem for item in sublist] # flatten list see:https://stackoverflow.com/questions/952914/how-to-make-a-flat-list-out-of-list-of-lists
+        nrem = list(set(nrem)) # distinct nodes
+
+        # nrem = list() # nodes to be removed
+        # for cid in cells:
+        #     if not cid in self.cellnodes: continue
+        #     nrem.extend(self.cellnodes[cid])
+        #     del self.cellnodes[cid]
+
+        def f1(nid):
+            lst = list(map(f2,self.nodecells[nid]))            
             self.nodecells[nid] = lst
+            if len(lst) == 0 or all(cid == -1 for cid in lst): return nid
+
+        def f2(cid):
+            if cid in cells: return -1
+            return cid
+
+        rem2 = list(map(f1,nrem))
+
+        # rem2 = list()
+        # for nid in list(set(nrem)):            
+        #     lst = list()
+        #     for cid in self.nodecells[nid]:
+        #         if cid in cells:
+        #             lst.append(-1)
+        #         else:
+        #             lst.append(cid)
+            
+        #     if len(lst) == 0 or all(cid == -1 for cid in lst): rem2.append(nid)
+        #     self.nodecells[nid] = lst
         
         if len(rem2) > 0:
             for nid in list(set(rem2)):

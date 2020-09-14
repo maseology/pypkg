@@ -3,13 +3,12 @@ import os, math
 import numpy as np
 from pymmio import files as mmio
 from pymmio import ascii
-from pyGrid.indx import indx
+from pyGrid.indx import INDX
 from pyproj import Proj
 from tqdm import tqdm
 
 
 class SWS:
-    ca = 1.
     km2 = 1.
     elv = 0.0
     ylat = 48.0
@@ -18,29 +17,38 @@ class SWS:
     asp = 0.0
 
 class Watershed:
-    pass
+    xr = dict() # swsid: [cell ids]
+    t = dict() # ordered id: (from swsid, to swsid)
+    s = dict() # swsid: SWS
 
-    def __init__(self, fp, hdem):
+    def __init__(self, fp, hdem, selection=None):
         print(' loading ' + fp)
-        idx = indx(fp,hdem.gd)
-        self.a = idx.a
-        self.t = dict()
+        idx = INDX(fp,hdem.gd)
+        self.xr = { k: idx.a[k] for k in selection }
         if os.path.exists(mmio.removeExt(fp)+'.topo'):
             for ln in ascii.readCSV(mmio.removeExt(fp)+'.topo'):
-                self.t[int(ln[0])] = (int(ln[1]), int(ln[2])) # {ordered id: (from swsid, to swsid)}
+                k = int(ln[0])
+                u = int(ln[1])
+                d = int(ln[2])
+                if selection != None: 
+                    if not u in selection: continue
+                    if not d in selection: continue
+                self.t[k] = (u, d) # {ordered id: (from swsid, to swsid)}
         else:
             print('error: sws .topo not found')
             quit()
 
-        self.__buildSWS(hdem)
+        self.__buildSWS(hdem, selection)
 
-    def __buildSWS(self, hdem):        
+    def __buildSWS(self, hdem, sel):        
         self.s = dict()
         ca = hdem.gd.cs**2
-        pbar = tqdm(total=len(self.a))
+        pbar = tqdm(total=len(self.xr))
         myProj = Proj("+proj=utm +zone=17N, +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs")        
-        for k,v in self.a.items():  
+        for k,v in self.xr.items():  
             pbar.update()          
+            if sel != None: 
+                if not k in sel: continue
             sx = 0.0
             sy = 0.0
             sz = 0.0
@@ -63,7 +71,6 @@ class Watershed:
 
             n = len(v)
             ss = SWS()
-            ss.ca = ca
 
             ss.km2 = sca / 1000 / 1000
             lg,ll = myProj(sx/n, sy/n, inverse=True)
@@ -74,8 +81,8 @@ class Watershed:
                 ss.slp = 0.001
             else:
                 ss.slp = sg/sgn
-            ss.asp = (math.atan2(sax/n,say/n) + 2 * np.pi) % (2 * np.pi) # raven requires [0 to 2Pi] over [-Pi to Pi]
-            ss.rchlen = math.sqrt(10) ##################################################### HARD CODED
+            ss.asp = (math.atan2(sax/n,say/n) + 2 * np.pi) % (2 * np.pi) # [0 to 2Pi] (raven requires [0 to 2Pi] over [-Pi to Pi])
+            ss.rchlen = math.sqrt(n*ca*1e-6)
 
-            self.s[k] = ss            
+            self.s[k] = ss
         pbar.close()

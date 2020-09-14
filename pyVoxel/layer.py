@@ -1,5 +1,6 @@
 
 import random
+import numpy as np
 from pyGrid import definition, vertex
 from pyVoxel import prism
 
@@ -13,14 +14,18 @@ class Layer:
     def __init__(self, geom):        
         if type(geom) == tuple:
             if type(geom[0]) == definition.GDEF:
-                if not type(geom[1]) == list: print("UNSTRUC.__init__ error 000")
-                self.__buildVDEFlayered(geom)
+                if type(geom[1]) == list: 
+                    self.__buildVDEFlayered(geom)
+                elif type(geom[1]) == np.ndarray:
+                    self.__buildVDEFarray(geom)
+                else:
+                    print("Layer.__init__ error 000")
             else:
-                print("UNSTRUC.__init__ error 00")
+                print("Layer.__init__ error 00")
         elif type(geom) == vertex.VDEF:
             self.__buildVDEFrnd(geom)
         else:
-            print("UNSTRUC.__init__ error END")
+            print("Layer.__init__ error END")
 
     def __buildVDEFrnd(self,vdef):
         for k, cn in vdef.cellnodes.items():
@@ -35,13 +40,14 @@ class Layer:
         cnx = gd.adjacentCells() # only captures actives
         vg = vertex.VDEF(gd) # vertex grid  
         vg.RemoveCellsNonActives()
-        pid = 0
         da = 0.0
         for ly in range(len(dp)):
             for cid in gd.crc:
                 pid = ly*nc + cid
                 verts = list()
                 con = list()
+
+                # build prism
                 for nid in vg.cellnodes[cid]: verts.append(vg.nodecoord[nid])                
                 self.prsms[pid] = prism.Prism(verts,da,da-dp[ly])
 
@@ -62,3 +68,36 @@ class Layer:
             da -= dp[ly]
         pass
 
+    def __buildVDEFarray(self,geom):
+        gd = geom[0] # grid definition        
+        top = geom[1]
+        bot = geom[2]
+        ly = geom[3]
+        gd.setActives(top != 0)
+        cnx = gd.adjacentCells() # only captures actives
+        vg = vertex.VDEF(gd) # vertex grid  
+        # vg.RemoveCellsNonActives()
+        nc = gd.ncol*gd.nrow
+        for cid, rc in gd.crc.items():
+            pid = ly*nc + cid
+            verts = list()
+            con = list()
+
+            # build prism
+            for nid in vg.cellnodes[cid]: verts.append(vg.nodecoord[nid])                
+            self.prsms[pid] = prism.Prism(verts,top.item(rc),bot.item(rc))
+
+            # lateral connections
+            for c in cnx[cid]:
+                xid = ly*nc + c
+                con.append(xid)
+
+            # # vertical connections
+            # if ly > 0:
+            #     xid = (ly-1)*nc + cid
+            #     con.append(xid) # above
+            # if ly < len(dp)-1:
+            #     xid = (ly+1)*nc + cid
+            #     con.append(xid) # below
+
+            self.prsms[pid].c = con

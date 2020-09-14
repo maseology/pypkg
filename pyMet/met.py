@@ -30,6 +30,7 @@ class Met:
     def __init__(self, fp=None, printout=True, skipdata=True):
         if fp is None: return
         # print(' loading', fp)
+        self.filepath = fp
         with open(fp, "rb") as f:
             self.v = struct.unpack('<H', f.read(2))[0] # version
             self.uc = struct.unpack('<B', f.read(1))[0] # unit code:   0 unknown units; 1 standard units (m-s-kg)
@@ -405,6 +406,18 @@ class Met:
             quit()
         return rec
 
+    def cropToExtent(self, metgd=None, extgd=None, buffer=0.0):
+        d = dict()
+        if self.lc == 0:
+            for c,rc in metgd.crc.items():
+                xy = metgd.cco[rc]
+                if extgd.contains(xy[0], xy[1], buffer): d[c] = xy
+        else:
+            pass
+        self.nloc = len(d)
+        self.dfloc = pd.DataFrame.from_dict(d, orient='index', columns=('XE','YN'))
+        
+
     def convertToUTM17(self):
         if self.espg != 26917:
             outProj = pyproj.Proj(init='epsg:26917')
@@ -418,6 +431,12 @@ class Met:
             else:
                 inProj = pyproj.Proj(init='epsg:' + str(self.espg))
             self.dfloc['E'], self.dfloc['N'] = pyproj.transform(inProj,outProj, self.dfloc['XE'].tolist(), self.dfloc['YN'].tolist())
+
+    def convertToLatLng(self):
+        inProj =  pyproj.Proj(init='epsg:'+str(self.espg))
+        outProj = pyproj.Proj(init='epsg:4326')
+        self.dfloc['Lat'], self.dfloc['Long'] = pyproj.transform(inProj,outProj, self.dfloc['XE'].tolist(), self.dfloc['YN'].tolist()) 
+
 
     def WriteToFile(self, fp):        
         with open(fp, 'bw') as f:

@@ -1,10 +1,10 @@
 
-import os
-import struct
-from pymmio import files
+import os, struct
+import numpy as np
+from pymmio import files as mmio
 from pyGrid.definition import GDEF
-import sys
-sys.setrecursionlimit(10**5)
+# import sys
+# sys.setrecursionlimit(10**5)
 
 
 class tec:
@@ -22,17 +22,38 @@ class HDEM:
     us = None
 
     def __init__(self, filepath, skipflowpaths=False):        
-        gdfp = filepath+".gdef" # files.removeExt(filepath)+".gdef"
+        gdfp = filepath+".gdef" # mmio.removeExt(filepath)+".gdef"
         if not os.path.exists(gdfp):
-            print('error no grid definition file available: ',gdfp,'\n')
-            quit()
-        if files.getExtension(filepath)!=".uhdem": 
-            print("error: only .uhdem's supported ',filepath,'\n")
-            quit()
+            gdfp = mmio.removeExt(filepath)+".gdef"
+            if not os.path.exists(gdfp):
+                print('error no grid definition file available: ',gdfp,'\n')
+                quit()
 
         self.gd = GDEF(gdfp)
         print(' loading', filepath)
-        self.__loadUHDEM(filepath,skipflowpaths)       
+
+        ext = mmio.getExtension(filepath)
+        if ext == '.uhdem':
+            self.__loadUHDEM(filepath,skipflowpaths)
+        elif ext == '.hdem':
+            self.__loadHDEM(filepath,skipflowpaths)
+        else:
+            print("error: unsupported HDEM format\n")
+            quit()
+
+    def __loadHDEM(self,filepath,skipflowpaths):
+        a = np.fromfile(filepath, float, 3*self.gd.nrow*self.gd.ncol).reshape(self.gd.nrow, self.gd.ncol, 3)
+        cxy = self.gd.cco
+        self.tem = dict()
+        for c,rc in self.gd.crc.items():
+            x,y = cxy[rc]
+            z,g,s = a[rc]
+            self.tem[c] = tec(x,y,z,g,s)
+
+        if not skipflowpaths: print(' ** TODO: HDEM flowpaths not read **')
+
+
+
 
     def __loadUHDEM(self,filepath,skipflowpaths):
         # THIS IS VERY SLOW!!!!

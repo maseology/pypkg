@@ -5,6 +5,7 @@ from scipy.interpolate import griddata
 import math, itertools
 from bitarray import bitarray
 import pymmio.bitarray as bt
+import pymmio.files as mmio
 from tqdm import tqdm
 
 
@@ -26,6 +27,7 @@ class GDEF:
                 if chr(cs[0])=='U': self.unif=True
                 if not self.unif: print(' variable cell size currently unsupported')
                 self.cs=float(cs[1:])
+                self.extent = (self.xul, self.yul-self.nrow*self.cs, self.xul+self.ncol*self.cs, self.yul) # (xmin, ymin, xmax, ymax)
                 bact = f.read()
                 if bact == b'':
                     self.active=False
@@ -124,6 +126,11 @@ class GDEF:
     def Actives(self):
         return list(itertools.chain(*self.act)) # list of boolean
 
+    def setActives(self, actives):
+        self.act = actives # np.array(actives.tolist())[:self.nrow*self.ncol].reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
+        self.active = True        
+        self.build()
+
     def CellLeft(self,ir,jc):
         if self.rot != 0.0: print("definition.CellLeft error")
         return self.cco[ir][jc][0] - self.cs/2.0
@@ -193,6 +200,18 @@ class GDEF:
             d[cid] = l
         return d
 
+    def shape(self):
+        return (self.nrow,self.ncol)
+
+    def contains(self,x,y,buffer=0):
+        if x > self.extent[2] + buffer: return False
+        if x < self.extent[0] - buffer: return False
+        if y > self.extent[3] + buffer: return False
+        if y < self.extent[1] - buffer: return False
+        return True
+        
+
+
     ### IMPORT
     def LoadBinary(self,fp):
         try:
@@ -207,6 +226,13 @@ class GDEF:
         except Exception as error:
             print(error, '\n ', fp, 'is incompatible with this grid definition.')
             quit()
+
+    # def Open(self,fp,datatype,nbands):
+    #     ext = mmio.getExtension(fp)
+    #     if ext == 'bsq':
+    #         return np.fromfile(fp,datatype).reshape(nbands,self.nrow,self.ncol)
+    #     elif ext == 'bil':
+    #         return np.fromfile(file, datatype).reshape(self.nrow,self.ncol,nbands)
 
     ### INTERPOLATION
 

@@ -9,6 +9,12 @@ def readLines(filepath):
             lout.append(ln.strip())
     return(lout)
 
+def readInts(filepath):
+    lout = list()
+    for ln in readLines(filepath):
+        lout.append(int(ln))
+    return(lout)        
+
 def readCSV(filepath):
     with open(filepath) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
