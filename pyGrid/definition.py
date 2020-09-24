@@ -1,4 +1,5 @@
 
+import os
 from scipy import spatial
 import numpy as np
 from scipy.interpolate import griddata
@@ -118,7 +119,9 @@ class GDEF:
         return ir * self.ncol + jc
 
     def RowCol(self,cid):        
-        if cid < 0 or cid > self.nrow * self.ncol - 1: return
+        if cid < 0 or cid > self.nrow * self.ncol - 1: 
+            print()
+            return
         i = int(cid/self.ncol)
         j = cid - i*self.ncol
         return (i,j)
@@ -305,3 +308,21 @@ class GDEF:
                     dat[self.act].tofile(fp)
             else:
                 print(' gdef.printActives does not support type: ' + str(type(dat)))
+
+    def saveBinaryInt(self,fp,dat):
+        if type(dat)==dict:
+            a = np.full(self.shape(),-9999.0,dtype=int)
+            for cid,v in dat.items(): a[self.RowCol(cid)] = int(v)
+            if os.path.exists(fp): os.remove(fp)
+            a.tofile(fp) # always saved in C-order (row-major)
+        else:
+            pass
+
+    def saveBinary(self,fp,dat):
+        if type(dat)==dict:
+            a = np.full(self.shape(),-9999.0,dtype='float64')
+            for cid,v in dat.items(): a[self.RowCol(cid)] = v
+            if os.path.exists(fp): os.remove(fp)
+            a.tofile(fp) # always saved in C-order (row-major)
+        else:
+            pass

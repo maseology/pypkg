@@ -24,7 +24,8 @@ class Watershed:
     def __init__(self, fp, hdem, selection=None):
         print(' loading ' + fp)
         idx = INDX(fp,hdem.gd)
-        self.xr = { k: idx.a[k] for k in selection }
+        self.gd = hdem.gd
+        if selection != None: self.xr = { k: idx.a[k] for k in selection }
         if os.path.exists(mmio.removeExt(fp)+'.topo'):
             for ln in ascii.readCSV(mmio.removeExt(fp)+'.topo'):
                 k = int(ln[0])
@@ -86,3 +87,10 @@ class Watershed:
 
             self.s[k] = ss
         pbar.close()
+
+    def saveToIndx(self,fp):
+        a = dict()
+        for sid,cids in self.xr.items():
+            for cid in cids:
+                a[cid] = sid
+        self.gd.saveBinaryInt(fp,a)

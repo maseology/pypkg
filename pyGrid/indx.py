@@ -15,15 +15,17 @@ class INDX:
             elif os.path.exists(mmio.removeExt(fp)+".gdef"):
                 self.gd = GDEF(mmio.removeExt(fp)+".gdef")
             else:
-                print('grid definition cannot be found')
+                print('INDX.__init__ grid definition cannot be found')
                 quit()                
         else:
             self.gd = gd
         aa = np.fromfile(fp,int) #.reshape(gd.na)
-        self.x = dict(zip(gd.crc.keys(),aa))
+        if len(aa) != len(self.gd.crc):
+                print('INDX.__init__ incorrect grid definition')
+                quit()
+        self.x = dict(zip(self.gd.crc.keys(),aa))
         self.a = {}
         for k, v in self.x.items():
             self.a.setdefault(v, []).append(k)
         
-
-
+    def saveAs(self,fp): self.gd.saveBinaryInt(fp,self.x)
