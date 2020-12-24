@@ -11,23 +11,33 @@ from tqdm import tqdm
 
 
 class GDEF:
-    pass
+    # xul=0.
+    # yul=0.
+    # rot=0.
+    # nrow=0
+    # ncol=0
+    # cs=0.
+    # unif=False
 
-    def __init__(self, filepath):
+    def __init__(self, filepath=None):
+        if filepath==None: return
         print(' loading', filepath)
         try:
             with open(filepath, 'rb') as f:
                 self.xul=float(f.readline()) # UL corner
                 self.yul=float(f.readline()) # UL corner
                 self.rot=float(f.readline())
-                if self.rot!=0.0: print(' rotated gdef currently unsupported')
                 self.nrow=int(f.readline())
                 self.ncol=int(f.readline())
                 cs=f.readline()
-                self.unif=False
                 if chr(cs[0])=='U': self.unif=True
-                if not self.unif: print(' variable cell size currently unsupported')
+                
                 self.cs=float(cs[1:])
+
+
+                if self.rot!=0.0: print(' rotated gdef currently unsupported')
+                if not self.unif: print(' variable cell size currently unsupported')
+
                 self.extent = (self.xul, self.yul-self.nrow*self.cs, self.xul+self.ncol*self.cs, self.yul) # (xmin, ymin, xmax, ymax)
                 bact = f.read()
                 if bact == b'':
@@ -287,6 +297,15 @@ class GDEF:
         return a
 
     ### EXPORT
+
+    def saveAs(self,filepath):
+        with open(filepath, 'w') as f:
+            f.write('{}\n'.format(self.xul))
+            f.write('{}\n'.format(self.yul))
+            f.write('{}\n'.format(self.rot))
+            f.write('{}\n'.format(self.nrow))
+            f.write('{}\n'.format(self.ncol))
+            f.write('U{}\n'.format(self.cs))
 
     def printActives(self,fp,dat=None):
         if dat is None:
