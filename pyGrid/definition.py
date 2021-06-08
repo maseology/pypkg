@@ -144,6 +144,10 @@ class GDEF:
         self.active = True        
         self.build()
 
+    def removeActives(self, actives):
+        self.active = False        
+        self.build()        
+
     def CellLeft(self,ir,jc):
         if self.rot != 0.0: print("definition.CellLeft error")
         return self.cco[ir][jc][0] - self.cs/2.0
