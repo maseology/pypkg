@@ -25,7 +25,10 @@ class Watershed:
         print(' loading ' + fp)
         idx = INDX(fp,hdem.gd)
         self.gd = hdem.gd
-        if selection != None: self.xr = { k: idx.a[k] for k in selection }
+        if selection != None: 
+            self.xr = { k: idx.a[k] for k in selection } 
+        else: 
+            self.xr = idx.a
         if os.path.exists(mmio.removeExt(fp)+'.topo'):
             for ln in ascii.readCSV(mmio.removeExt(fp)+'.topo'):
                 k = int(ln[0])
