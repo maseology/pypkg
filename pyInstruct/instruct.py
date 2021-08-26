@@ -8,6 +8,7 @@ class build():
     desc = ""
     root = ""
     nam = ""
+    mode = ""
     params = dict()
 
     def __init__(self, filepath):
@@ -16,6 +17,7 @@ class build():
         for k, v in self.params.items():
             if type(v) == dict:
                    self.params[k] =  {kk.lower(): vv for kk, vv in v.items()} # converting all to lower case
+        files.mkDir(self.root+self.nam)
 
     def __read(self, fp):
         print("\nReading: " + fp + " ...\n")
@@ -60,6 +62,10 @@ class build():
             if ln[0].lower()=="description": 
                 self.desc = ln[1]
                 continue
+
+            if ln[0].lower()=="mode": 
+                self.mode = ln[1]
+                continue            
 
             v = self.__parsep(ln)
             self.params[v[0]]=v[1]       

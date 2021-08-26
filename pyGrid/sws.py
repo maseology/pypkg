@@ -21,7 +21,8 @@ class Watershed:
     t = dict() # ordered id: (from swsid, to swsid)
     s = dict() # swsid: SWS
 
-    def __init__(self, fp, hdem, selection=None):
+    def __init__(self, fp=None, hdem=None, selection=None):
+        if hdem is None: return
         print(' loading ' + fp)
         idx = INDX(fp,hdem.gd)
         self.gd = hdem.gd
