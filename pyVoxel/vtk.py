@@ -5,6 +5,21 @@ from pyvtk import *
 def PrismsToVTK(prsms, outputFP):
     id = list()
     pts = list()
+
+    # connections
+    lns = list()
+    lenp = len(prsms)
+    for k, p in prsms.items():
+        i0 = len(pts)
+        pts.append(p.Centroid())
+        for c in p.c:
+            if c==-1:continue
+            i1 = len(pts)
+            id.append(lenp) #+(i1-lenp)/10000)
+            # lenp+=1
+            pts.append(prsms[c].Centroid())
+            lns.append([i0,i1])
+
     hex = list()    
     for k, p in prsms.items():
         id.append(k)
@@ -17,18 +32,8 @@ def PrismsToVTK(prsms, outputFP):
         pts.extend(l.tolist() for l in bx)
         pts.extend(l.tolist() for l in tx)        
         hex.append(ord)
-
-    lns = list()
-    for k, p in prsms.items():
-        i0 = len(pts)
-        pts.append(p.Centroid())
-        for c in p.c:
-            i1 = len(pts)
-            id.append(i0+i1/10000)
-            pts.append(prsms[c].Centroid())
-            lns.append([i0,i1])
-
-    fvtk = VtkData(UnstructuredGrid(pts, voxel=hex, line=lns), CellData(Scalars(id)))
+    # fvtk = VtkData(UnstructuredGrid(pts, voxel=hex), CellData(Scalars(id,'cellid')))
+    fvtk = VtkData(UnstructuredGrid(pts, line=lns, voxel=hex), CellData(Scalars(id,'cellid')))
     fvtk.tofile(outputFP, 'binary')
 
 # def ConnectionsToVTK(prsms, outputFP):

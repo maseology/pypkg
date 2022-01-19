@@ -1,5 +1,4 @@
 
-from pyGrid import definition
 
 class VDEF:
     nodecoord = dict()
@@ -61,15 +60,31 @@ class VDEF:
             self.nodecells[self.cellnodes[cid][2]][0] = cid
             self.nodecells[self.cellnodes[cid][3]][3] = cid
 
-    # def Copy(self,translateZ=0.0):
-    #     vdef = VDEF()
-    #     vdef.cellnodes = self.cellnodes.copy()
-    #     vdef.nodecells = self.nodecells.copy()
-    #     vdef.nodecoord = self.nodecoord.copy()
-    #     for k in vdef.nodecoord:
-    #         vdef.nodecoord[k] = (vdef.nodecoord[k][0],vdef.nodecoord[k][1],vdef.nodecoord[k][2] + translateZ)
-    #     return vdef
-
+    def adjacentCells(self, cardinalOnly=True):
+        d = dict()
+        if cardinalOnly:
+            for eid, nids in self.cellnodes.items():
+                dd = dict()
+                for nid in nids:
+                    for eid2 in self.nodecells[nid]:
+                        if eid2==-1: continue
+                        if eid2==eid: continue
+                        if not eid2 in dd: dd[eid2] = 1
+                        dd[eid2] += 1                           
+                l = list()
+                for eid2, cnt in dd.items():
+                    if cnt <3: continue
+                    l.append(eid2)
+                d[eid] = l
+        else:
+            for eid, nids in self.cellnodes.items():
+                l = list()
+                for nid in nids: l.extend(self.nodecells[nid])
+                l = list(set(l)) # get unique
+                l = list(filter((eid).__ne__,l)) # safer than l.remove(eid)
+                l = list(filter((-1).__ne__,l))
+                d[eid] = l
+        return d
 
     def RemoveCells(self,cells):
         if type(cells) is int: cells = [cells]
@@ -124,3 +139,51 @@ class VDEF:
             for j in range(self.gd.ncol):
                 if not self.gd.act[i][j]: rem.append(self.gd.CellID(i,j))
         if len(rem) > 0: self.RemoveCells(rem)
+
+    # def Copy(self,translateZ=0.0):
+    #     vdef = VDEF()
+    #     vdef.cellnodes = self.cellnodes.copy()
+    #     vdef.nodecells = self.nodecells.copy()
+    #     vdef.nodecoord = self.nodecoord.copy()
+    #     for k in vdef.nodecoord:
+    #         vdef.nodecoord[k] = (vdef.nodecoord[k][0],vdef.nodecoord[k][1],vdef.nodecoord[k][2] + translateZ)
+    #     return vdef
+
+def ReadAH3(fp):
+    vg = VDEF()
+
+    # read file
+    xyz = list()
+    elm = list()
+    with open(fp, "r") as f:
+        nps = int(f.readline())
+        for _ in range(nps): xyz.append([float(item) for item in f.readline().split()])
+        epl = int(f.readline())
+        for _ in range(epl): elm.append([int(item)-1 for item in f.readline().split()]) # zero-based
+
+    # Build
+    nid = 0
+    for c in xyz:
+        vg.nodecoord[nid] = c
+        vg.nodecells[nid] = [-1, -1, -1, -1] # initialize (-1 for no adjacent cell)
+        nid += 1
+
+    eid = -1
+    for v in elm:
+        eid += 1
+        if len(v)==4:
+            vg.cellnodes[eid] = v
+            # p2---p3   y
+            #  | c |    |        set to VTK standard
+            # p0---p1   0---x
+            vg.nodecells[vg.cellnodes[eid][0]][1] = eid
+            vg.nodecells[vg.cellnodes[eid][1]][2] = eid
+            vg.nodecells[vg.cellnodes[eid][2]][0] = eid
+            vg.nodecells[vg.cellnodes[eid][3]][3] = eid
+            # 2---1
+            # | n |
+            # 3---0            
+        else:
+            print('---------------------- TODO')
+
+    return vg

@@ -1,6 +1,7 @@
 
 import random
 import numpy as np
+import statistics
 from pyGrid import definition, vertex
 from pyVoxel import prism
 
@@ -15,11 +16,13 @@ class Layer:
         if type(geom) == tuple:
             if type(geom[0]) == definition.GDEF:
                 if type(geom[1]) == list: 
-                    self.__buildVDEFlayered(geom)
+                    self.__buildGDEFlayered(geom)
                 elif type(geom[1]) == np.ndarray:
-                    self.__buildVDEFarray(geom)
+                    self.__buildGDEFarray(geom)
                 else:
                     print("Layer.__init__ error 000")
+            elif type(geom[0]) == vertex.VDEF:
+                self.__buildVDEFlayered(geom)
             else:
                 print("Layer.__init__ error 00")
         elif type(geom) == vertex.VDEF:
@@ -33,7 +36,43 @@ class Layer:
             for nid in cn: lcrd.append(vdef.nodecoord[nid])
             self.prsms[k] = prism.Prism(lcrd,random.random(),-random.random())
 
+
     def __buildVDEFlayered(self,geom):
+        vg = geom[0] # vertex grid 
+        nly = geom[1] # number of layers/sub-divisions
+        cnx = vg.adjacentCells() # only captures actives
+
+        nc = len(vg.cellnodes)
+        for ly in range(nly):
+            for eid, nids in vg.cellnodes.items():
+                pid = ly*nc + eid
+                con = list()
+
+                # build prism
+                celltop = statistics.mean([vg.nodecoord[nid][2] for nid in nids])
+                verts = [[vg.nodecoord[nid][0],vg.nodecoord[nid][1]] for nid in nids]           
+                self.prsms[pid] = prism.Prism(verts,(1-ly/nly)*celltop,(1-(ly+1)/nly)*celltop)
+
+                # lateral connections
+                for c in cnx[eid]:
+                    xid = ly*nc + c
+                    con.append(xid)
+
+                # vertical connections
+                if ly > 0:
+                    xid = (ly-1)*nc + eid
+                    con.append(xid) # above
+                else:
+                    con.append(-1)
+                if ly < nly-1:
+                    xid = (ly+1)*nc + eid
+                    con.append(xid) # below
+                else:
+                    con.append(-1)
+                    
+                self.prsms[pid].c = con
+
+    def __buildGDEFlayered(self,geom):
         gd = geom[0] # grid definition
         nc = gd.ncol*gd.nrow
         dp = geom[1] # depths
@@ -68,7 +107,7 @@ class Layer:
             da -= dp[ly]
         pass
 
-    def __buildVDEFarray(self,geom):
+    def __buildGDEFarray(self,geom):
         gd = geom[0] # grid definition        
         top = geom[1]
         bot = geom[2]

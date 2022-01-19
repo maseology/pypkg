@@ -29,6 +29,11 @@ class build():
 
             # commented out            
             if ln[0]=='!': continue
+            if ln[0]=='#': 
+                if len(self.desc) > 0: continue
+                self.desc = "\n".join(self.params.keys())
+                self.params = dict()
+                continue
             if ln.find('!') > -1: ln = ln[0:ln.find('!')].strip()
             
             ln = re.split(r'\t+', ln) # tab-delimited
@@ -110,9 +115,9 @@ class build():
         if len(self.desc) == 0: 
             print('='*17 + " MODFLOW6 builder")
         else:
-            print(" " + '='*(13 + len(self.desc)))
-            print(" Description: " + self.desc)
-            print(" " + '='*(13 + len(self.desc)))
+            print('='*(13 + len(self.desc)))
+            print("Description:\n" + self.desc)
+            print('='*(13 + len(self.desc)))
         print() #" Parameters:")
         for k,v in self.params.items():
             if type(v) is dict:
