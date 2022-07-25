@@ -41,7 +41,7 @@ def readFloats(fp):
     with open(fp) as f:
         return [float(x) for x in f]
 
-def readIntFloats(fp):
+def readIntFloats(fp, delim='\t'):
     with open(fp) as f:
-        lines = (line.split('\t') for line in f)
+        lines = (line.split(delim) for line in f)
         return dict((int(k), float(v)) for k, v in lines)        
