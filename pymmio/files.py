@@ -14,7 +14,7 @@ def dirList(directory, ext=""):
     lst = list()
     for filename in os.listdir(directory):
         if len(ext) > 0:
-            if filename.endswith(ext): 
+            if filename.lower().endswith(ext.lower()): 
                 lst.append(os.path.join(directory, filename))
         else: 
             lst.append(os.path.join(directory, filename))
@@ -31,6 +31,7 @@ def getExtension(fp): # returns as '.ext'
 
 def getFileName(fp,rmExt=True):
     base=os.path.basename(fp)
+    if base == '': base = os.path.split(os.path.split(fp)[0])[1]
     if rmExt: return(removeExt(base))
     return(base)
 
