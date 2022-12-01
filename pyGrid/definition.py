@@ -3,10 +3,8 @@ import os
 from scipy import spatial
 import numpy as np
 from scipy.interpolate import griddata
-import math, itertools
+import itertools
 from bitarray import bitarray
-import pymmio.bitarray as bt
-import pymmio.files as mmio
 from tqdm import tqdm
 
 
@@ -100,12 +98,13 @@ class GDEF:
             self.ncell = self.nrow*self.ncol
             self.act = np.full((self.nrow,self.ncol),True,bool) # actives (all set to true for the moment) # dict.fromkeys(range(0,self.ncell), True) # {cid: True for cid in range(0,self.nrow*self.ncol)}         
 
-        grc = np.array(np.meshgrid(range(self.nrow),range(self.ncol),indexing='ij')) 
-        # self.crc = np.stack((grc[0, :, :],grc[1, :, :]),axis=2)[self.act].reshape(self.ncell,-1) # cell id to row-col 
-        v = tuple(map(tuple, np.stack((grc[0, :, :],grc[1, :, :]),axis=2)[self.act].reshape(self.ncell,-1))) # cell id to row-col 
-
-        c = np.arange(0,self.nrow*self.ncol,1).reshape((self.nrow,self.ncol)) # cell id (2D) array
-        self.crc = dict(zip(c[self.act],v)) # dict of (active) cell id to row-col
+        # build cell to row-col cross-reference
+        msk = (self.act>0).reshape(self.nrow*self.ncol).tolist()
+        grc = np.array(np.meshgrid(range(self.nrow),range(self.ncol),indexing='ij'))
+        rcs = np.stack((grc[0, :, :],grc[1, :, :]),axis=2).reshape(self.nrow*self.ncol,-1).T
+        rcs = list(itertools.compress(list(zip(rcs[0],rcs[1])), msk))
+        cids = list(itertools.compress(list(range(self.nrow*self.ncol)), msk))
+        self.crc = dict(zip(cids,rcs))
 
         gco = np.array(np.meshgrid(range(self.ncol), range(self.nrow),indexing='xy'),float) # coordinate grid
         gco[0, :, :] *= self.cs  # cols/ec -- coordinate transformation (from https://bic-berkeley.github.io/psych-214-fall-2016/numpy_meshgrid.html)

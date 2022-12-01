@@ -1,5 +1,6 @@
 
 import re, json
+from datetime import datetime
 from pymmio import ascii, files
 
 # pyInstruct is a set of general routines built to read instruction files for a variety model build procedures
@@ -70,7 +71,11 @@ class build():
 
             if ln[0].lower()=="mode": 
                 self.mode = ln[1]
-                continue            
+                continue
+
+            if ln[0].lower()=="dtb" or ln[0].lower()=="dte":
+                self.params[ln[0].lower()] = datetime.strptime(ln[1], '%Y-%m-%d')
+                continue           
 
             v = self.__parsep(ln)
             self.params[v[0]]=v[1]       

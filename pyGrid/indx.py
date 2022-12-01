@@ -9,6 +9,7 @@ class INDX:
     a = None
 
     def __init__(self,fp,gd=None):
+        # if mmio.getExtension(fp).lower()==".indx":
         if gd == None:
             if os.path.exists(fp + ".gdef"):
                 self.gd = GDEF(fp + ".gdef")
@@ -20,10 +21,26 @@ class INDX:
         else:
             self.gd = gd
         aa = np.fromfile(fp,int) #.reshape(gd.na)
-        if len(aa) != len(self.gd.crc):
-                print('INDX.__init__ incorrect grid definition')
-                quit()
-        self.x = dict(zip(self.gd.crc.keys(),aa))
+
+        # elif mmio.getExtension(fp).lower()==".bil":
+        #     pass
+
+        # else:
+        #     print("unrecognized indx file type: "+fp)
+        #     quit()
+
+        if len(aa) == self.gd.ncol*self.gd.ncol:
+            pass
+        elif len(aa) == self.gd.ncol*self.gd.ncol/2:
+            aa = np.fromfile(fp,np.int16).reshape(gd.act.shape)
+            self.x = {}
+            for k,v in self.gd.crc.items(): self.x[k] = aa[v]            
+        elif len(aa) != len(self.gd.crc):
+            print('INDX.__init__ incorrect grid definition for '+fp)
+            quit()
+        else:
+            self.x = dict(zip(self.gd.crc.keys(),aa))
+ 
         self.a = {}
         for k, v in self.x.items():
             self.a.setdefault(v, []).append(k)
