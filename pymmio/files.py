@@ -10,14 +10,23 @@ def mkDir(path):
     else:
         print (" Successfully created the directory %s " % path)
 
-def dirList(directory, ext=""):
+def dirList(directory, ext="", recursive=True):
     lst = list()
-    for filename in os.listdir(directory):
-        if len(ext) > 0:
-            if filename.lower().endswith(ext.lower()): 
+    if recursive:
+        for _, _, files in os.walk(directory):
+            for filename in files:
+                if len(ext) > 0:
+                    if filename.lower().endswith(ext.lower()): 
+                        lst.append(os.path.join(directory, filename))
+                else:
+                    lst.append(os.path.join(directory, filename))
+    else:
+        for filename in os.listdir(directory):
+            if len(ext) > 0:
+                if filename.lower().endswith(ext.lower()): 
+                    lst.append(os.path.join(directory, filename))
+            else: 
                 lst.append(os.path.join(directory, filename))
-        else: 
-            lst.append(os.path.join(directory, filename))
     return(lst)
 
 def deleteDir(directory):
