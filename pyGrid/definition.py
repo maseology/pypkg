@@ -250,6 +250,8 @@ class GDEF:
     #     elif ext == 'bil':
     #         return np.fromfile(file, datatype).reshape(self.nrow,self.ncol,nbands)
 
+    def nullArray(self, val): return(np.ones((self.nrow,self.ncol))*val)
+
     ### INTERPOLATION
 
     def nullMgrid(self):
