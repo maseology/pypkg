@@ -30,4 +30,8 @@ class REAL:
         for k, v in self.x.items():
             self.a.setdefault(v, []).append(k)
         
-    def saveAs(self,fp): self.gd.saveBinary(fp,self.x)
+    def saveAs(self,fp): 
+        if fp[-3:] in ["png","bmp"]:
+            self.gd.saveBitmap(fp,self.x)
+        else:
+            self.gd.saveBinary(fp,self.x)

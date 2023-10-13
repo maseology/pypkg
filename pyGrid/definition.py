@@ -5,6 +5,7 @@ import numpy as np
 from scipy.interpolate import griddata
 import itertools
 from bitarray import bitarray
+from PIL import Image
 from tqdm import tqdm
 
 
@@ -17,9 +18,9 @@ class GDEF:
     # cs=0.
     # unif=False
 
-    def __init__(self, filepath=None):
+    def __init__(self, filepath=None, prnt=True):
         if filepath==None: return
-        print(' loading', filepath)
+        if prnt: print(' loading', filepath)
         try:
             with open(filepath, 'rb') as f:
                 self.xul=float(f.readline()) # UL corner
@@ -143,7 +144,7 @@ class GDEF:
         self.active = True        
         self.build()
 
-    def removeActives(self, actives):
+    def removeActives(self):
         self.active = False        
         self.build()        
 
@@ -229,13 +230,20 @@ class GDEF:
 
 
     ### IMPORT
-    def LoadBinary(self,fp):
+    def LoadBinary(self,fp, rowmajor=True):
+        ord = (self.nrow,self.ncol)
+        if not rowmajor: ord = (self.ncol,self.nrow)
         try:
-            return np.fromfile(fp,float).reshape((self.nrow,self.ncol))
+            a = np.fromfile(fp,float).reshape(ord)
         except Exception as error:
-            print(error, '\n ', fp, 'is incompatible with this grid definition.')
-            quit()
-            
+            try:
+                a = np.fromfile(fp,np.float32).reshape(ord)
+            except Exception as error:
+                print(error, '\n ', fp, 'is incompatible with this grid definition.')
+                quit()
+        if not rowmajor: a = np.swapaxes(a,0,1)  
+        return a
+                
     def LoadIntBinary(self,fp):
         try:
             return np.fromfile(fp,int).reshape((self.nrow,self.ncol))
@@ -348,5 +356,21 @@ class GDEF:
             for cid,v in dat.items(): a[self.RowCol(cid)] = v
             if os.path.exists(fp): os.remove(fp)
             a.tofile(fp) # always saved in C-order (row-major)
+        else:
+            pass
+
+    def saveBitmap(self,fp,dat):
+        if type(dat)==dict:
+            a = np.full(self.shape(),-9999.0,dtype='float32')
+            for cid,v in dat.items(): a[self.RowCol(cid)] = v
+            if os.path.exists(fp): os.remove(fp)
+            img = Image.fromarray(a)
+            img = img.convert("RGB")
+            img.save(fp)
+        elif type(dat)==np.ndarray:
+            if os.path.exists(fp): os.remove(fp)
+            img = Image.fromarray(dat)
+            img = img.convert("RGB")
+            img.save(fp)
         else:
             pass
