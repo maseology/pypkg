@@ -136,8 +136,9 @@ class GDEF:
         j = cid - i*self.ncol
         return (i,j)
 
-    def Actives(self):
-        return list(itertools.chain(*self.act)) # list of boolean
+    def Actives(self): return list(itertools.chain(*self.act)) # list of boolean
+
+    def ActiveMask(self): return np.array(self.Actives(), np.int32).reshape(self.shape())
 
     def setActives(self, actives):
         self.act = actives # np.array(actives.tolist())[:self.nrow*self.ncol].reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
@@ -374,3 +375,20 @@ class GDEF:
             img.save(fp)
         else:
             pass
+
+    def toHDR(self,fp,nodata=-9999):
+        with open(fp, 'w') as f:
+            f.write('BYTEORDER      I\n')
+            f.write('LAYOUT         BIL\n')
+            f.write('NROWS          '+str(self.nrow)+'\n')
+            f.write('NCOLS          '+str(self.ncol)+'\n')
+            f.write('NBANDS         1\n')
+            f.write('NBITS          32\n')
+            f.write('BANDROWBYTES   '+str(self.nrow*4)+'\n')
+            f.write('TOTALROWBYTES  '+str(self.nrow*4)+'\n')
+            f.write('PIXELTYPE      FLOAT\n')
+            f.write('ULXMAP         '+str(self.xul+self.cs/2)+'\n') # The x-axis map coordinate of the center of the upper-left pixel.
+            f.write('ULYMAP         '+str(self.yul-self.cs/2)+'\n') # The y-axis map coordinate of the center of the upper-left pixel.
+            f.write('XDIM           '+str(self.cs)+'\n')
+            f.write('YDIM           '+str(self.cs)+'\n')
+            f.write('NODATA         '+str(nodata)+'\n')
