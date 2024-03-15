@@ -26,12 +26,28 @@ class Watershed:
         print(' loading ' + fp)
         idx = INDX(fp,hdem.gd)
         self.gd = hdem.gd
-        if selection != None: 
-            self.xr = { k: idx.a[k] for k in selection } 
+        topofp = mmio.removeExt(fp)+'.topo'
+        if not os.path.exists(topofp): self.__writeTopo(topofp,idx,hdem)
+
+        if selection != None:
+            if type(selection) is list:
+                self.xr = { k: idx.a[k] for k in selection } 
+            elif type(selection) is int:
+                if hdem is None:
+                    print('error: sws selection type int requires an hdem')
+                    quit()                      
+                lsel = set()
+                for c in hdem.Climb(selection): lsel.add(idx.x[c])
+                self.xr = { k: idx.a[k] for k in lsel }
+                selection = list(lsel)
+            else:
+                print('error: sws selection type unknown')
+                quit()                
         else: 
             self.xr = idx.a
-        if os.path.exists(mmio.removeExt(fp)+'.topo'):
-            for ln in ascii.readCSV(mmio.removeExt(fp)+'.topo'):
+
+        if os.path.exists(topofp):
+            for ln in ascii.readCSV(topofp):
                 k = int(ln[0])
                 u = int(ln[1])
                 d = int(ln[2])
@@ -49,7 +65,7 @@ class Watershed:
         self.s = dict()
         ca = hdem.gd.cs**2
         pbar = tqdm(total=len(self.xr))
-        myProj = Proj("+proj=utm +zone=17N, +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs")        
+        myProj = Proj('EPSG:26917') #("+proj=utm +zone=17N, +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs")        
         for k,v in self.xr.items():  
             pbar.update()          
             if sel != None: 
@@ -91,6 +107,35 @@ class Watershed:
 
             self.s[k] = ss
         pbar.close()
+
+
+    def __writeTopo(self, fp, sws, hdem):
+        swsids = list(sws.a.keys())
+        swsids.sort()
+        with open(fp, "w") as f:
+            f.write("linkID,upstream_swsID,downstream_swsID\n")
+            k=0
+            for u in swsids:
+                k+=1
+                if u < 0: continue
+                # print("{} {}".format(u, sws.x[u]))
+                x = list(hdem.fp[u].keys())
+                if len(x)!=1: print("WARNING more than 1 downslope " + str(u))
+                if x[0]<0: 
+                    d=x[0]
+                else:
+                    d=sws.x[x[0]]
+                # self.t[k] = (u, d) # {ordered id: (from swsid, to swsid)}
+                f.write("{},{},{}\n".format(k, u, d))
+
+
+    def outlets(self):
+        tt, o = set(), set()
+        for _,t in self.t.items(): tt.add(t[0])
+        for t in self.xr:
+            if t in tt: continue
+            o.add(int(t))
+        return list(o)
 
     def saveToIndx(self,fp):
         a = dict()

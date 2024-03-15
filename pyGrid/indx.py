@@ -30,7 +30,7 @@ class INDX:
         #     quit()
 
         if len(aa) == self.gd.ncol*self.gd.ncol:
-            pass
+            self.x = dict(zip(np.arange(self.gd.ncol*self.gd.ncol),aa))
         elif len(aa) == self.gd.ncol*self.gd.ncol/2:
             aa = np.fromfile(fp,np.int16).reshape(gd.act.shape)
             self.x = {}
@@ -39,7 +39,7 @@ class INDX:
             print('INDX.__init__ incorrect grid definition for '+fp)
             quit()
         else:
-            self.x = dict(zip(self.gd.crc.keys(),aa))
+            self.x = dict(zip(self.gd.crc.keys(),aa)) # actives only
  
         self.a = {}
         for k, v in self.x.items():

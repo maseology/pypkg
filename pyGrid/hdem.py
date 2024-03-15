@@ -53,8 +53,6 @@ class HDEM:
         if not skipflowpaths: print(' ** TODO: HDEM flowpaths not read **')
 
 
-
-
     def __loadUHDEM(self,filepath,skipflowpaths):
         # THIS IS VERY SLOW!!!!
         try:
@@ -124,3 +122,4 @@ class HDEM:
     def CatchmentArea(self,cid):
         lst = self.Climb(cid)
         return self.gd.cs*self.gd.cs*len(lst)
+ 

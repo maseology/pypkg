@@ -33,7 +33,6 @@ class GDEF:
                 
                 self.cs=float(cs[1:])
 
-
                 if self.rot!=0.0: print(' rotated gdef currently unsupported')
                 if not self.unif: print(' variable cell size currently unsupported')
 
@@ -43,41 +42,15 @@ class GDEF:
                     self.active=False
                 else:
                     ba = bitarray(endian='little')
-                    ba.frombytes(bact)
-                    # a = np.array(ba.tolist())[:self.nrow*self.ncol].reshape((self.nrow,self.ncol)) # active cell bitarray
-                    # c = np.arange(0,self.nrow*self.ncol,1).reshape((self.nrow,self.ncol)) # cell id (2D) array
-                    # # a2 = np.array(ba.tolist(),dtype=int)[:self.nrow*self.ncol].reshape((self.nrow,self.ncol))
-                    # # a2.tofile("E:/tmp/gdef/t190501_active.indx")                    
-                    # # print(np.sum(a), np.size(a))
-                    # # print(a)
-                    # # print(c)
-                    # # print(c[a])
-                    # self.act = c[a]
-                    # a2 = np.array(ba.tolist(),dtype=int)[:self.nrow*self.ncol].reshape((self.nrow,self.ncol))
-                    # print(a2)
-                    # a2.tofile("M:/RDRR/met/ORMGP_50_cid.indx")    
-                    self.act = np.array(ba.tolist())[:self.nrow*self.ncol].reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
+                    ba.frombytes(bact) 
+                    ac = np.array(ba.tolist())[:self.nrow*self.ncol]
+                    self.act = ac.reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
+                    # cu = np.array([sum(ac[0:x:1]) for x in range(0, len(ac)+1)][1:])
+                    # cu[ac==False] = -9998
+                    # cu-=1
+                    # self.ac = dict(zip(cu, np.arange(self.nrow*self.ncol,dtype=int)))
+                    # self.ac.pop(-9999) # active id to cell id (took way too long)
                     self.active=True
-
-                # nl=f.readline()                
-                # if len(nl)!=0: 
-                #     # print(' active gdef currently unsupported')
-                #     # self.active=False
-                #     aa = []
-                #     ba = bitarray.bitarray()               
-                #     while len(nl)!=0:
-                #         aa.extend(bt.tobits(nl))
-                #         ba.frombytes(nl.encode('windows-1252'))
-                #         print(ba)
-                #         nl=f.readline()
-                #     if sum(aa)>0:                        
-                #         aa = aa[:self.nrow*self.ncol]
-                #         print(sum(aa), len(aa))
-                #         print(aa)
-                #         np.asarray(aa).reshape((self.nrow,self.ncol)).tofile("E:/tmp/gdef/t190501_active.indx")
-                #         self.active=True                                                           
-                # else:
-                #     self.active=False
                 self.build()
         except FileNotFoundError:
             print(' grid definition file:',filepath,'not found.')
