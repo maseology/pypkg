@@ -21,7 +21,7 @@ class Watershed:
     t = dict() # ordered id: (from swsid, to swsid)
     s = dict() # swsid: SWS
 
-    def __init__(self, fp=None, hdem=None, selection=None):
+    def __init__(self, fp=None, hdem=None, selection=None, epsg=3161):
         if hdem is None: return
         print(' loading ' + fp)
         idx = INDX(fp,hdem.gd)
@@ -48,24 +48,31 @@ class Watershed:
 
         if os.path.exists(topofp):
             for ln in ascii.readCSV(topofp):
-                k = int(ln[0])
-                u = int(ln[1])
-                d = int(ln[2])
+                sid = int(ln[0])
+                dsid = int(ln[1])
+                # dcid = int(ln[2])
                 if selection != None: 
-                    if not u in selection: continue
-                    if not d in selection: continue
-                self.t[k] = (u, d) # {ordered id: (from swsid, to swsid)}
+                    if not dsid in selection: continue
+                    # if not dcid in selection: continue
+                self.t[sid] = dsid #(disd, dcid) # {from swsid: (to swsid, to cid)}
         else:
             print('error: sws .topo not found')
             quit()
 
-        self.__buildSWS(hdem, selection)
+        # # check
+        # for u,d in self.t.items():
+        #     if d==-1:continue
+        #     if d not in self.t:
+        #         print("topo ERROR {}; {}".format(u,d))
 
-    def __buildSWS(self, hdem, sel):        
+        self.__buildSWS(hdem, selection, epsg)
+
+    def __buildSWS(self, hdem, sel, epsg):        
         self.s = dict()
         ca = hdem.gd.cs**2
         pbar = tqdm(total=len(self.xr))
-        myProj = Proj('EPSG:26917') #("+proj=utm +zone=17N, +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs")        
+        # myProj = Proj('EPSG:26917') #("+proj=utm +zone=17N, +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs")        
+        myProj = Proj('EPSG:{}'.format(epsg))
         for k,v in self.xr.items():  
             pbar.update()          
             if sel != None: 
@@ -81,8 +88,14 @@ class Watershed:
             for cid in v:
                 sca += ca
                 tec = hdem.tem[cid]
-                sx += tec.x
-                sy += tec.y
+                if tec.x==-9999:
+                    i,j = hdem.gd.crc[cid]
+                    cc = hdem.gd.cco[i][j]
+                    sx += cc[0]
+                    sy += cc[1]
+                else:
+                    sx += tec.x
+                    sy += tec.y
                 sz += tec.z
                 if tec.g > 0: 
                     sg += tec.g
@@ -104,7 +117,6 @@ class Watershed:
                 ss.slp = sg/sgn
             ss.asp = (math.atan2(sax/n,say/n) + 2 * np.pi) % (2 * np.pi) # [0 to 2Pi] (raven requires [0 to 2Pi] over [-Pi to Pi])
             ss.rchlen = math.sqrt(n*ca*1e-6)
-
             self.s[k] = ss
         pbar.close()
 

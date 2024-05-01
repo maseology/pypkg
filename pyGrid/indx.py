@@ -29,12 +29,16 @@ class INDX:
         #     print("unrecognized indx file type: "+fp)
         #     quit()
 
-        if len(aa) == self.gd.ncol*self.gd.ncol:
-            self.x = dict(zip(np.arange(self.gd.ncol*self.gd.ncol),aa))
-        elif len(aa) == self.gd.ncol*self.gd.ncol/2:
+        if len(aa) == self.gd.nrow*self.gd.ncol:
+            self.x = dict(zip(np.arange(self.gd.nrow*self.gd.ncol),aa))
+        elif len(aa) == self.gd.nrow*self.gd.ncol/2:
             aa = np.fromfile(fp,np.int16).reshape(gd.act.shape)
             self.x = {}
-            for k,v in self.gd.crc.items(): self.x[k] = aa[v]            
+            for k,v in self.gd.crc.items(): self.x[k] = aa[v]    
+        elif len(aa) == self.gd.nrow*self.gd.ncol/4:
+            aa = np.fromfile(fp,np.uint8).reshape(gd.act.shape)
+            self.x = {}
+            for k,v in self.gd.crc.items(): self.x[k] = aa[v]                        
         elif len(aa) != len(self.gd.crc):
             print('INDX.__init__ incorrect grid definition for '+fp)
             quit()
@@ -42,6 +46,7 @@ class INDX:
             self.x = dict(zip(self.gd.crc.keys(),aa)) # actives only
  
         self.a = {}
+        self.x = {k:v for k, v in self.x.items() if v != -9999}
         for k, v in self.x.items():
             self.a.setdefault(v, []).append(k)
         

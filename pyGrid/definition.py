@@ -120,22 +120,22 @@ class GDEF:
 
     def removeActives(self):
         self.active = False        
-        self.build()        
+        self.build()
 
     def CellLeft(self,ir,jc):
-        if self.rot != 0.0: print("definition.CellLeft error")
+        if self.rot != 0.0: print("definition.CellLeft error: rotation no supported")
         return self.cco[ir][jc][0] - self.cs/2.0
 
     def CellRight(self,ir,jc):
-        if self.rot != 0.0: print("definition.CellRight error")
+        if self.rot != 0.0: print("definition.CellRight error: rotation no supported")
         return self.cco[ir][jc][0] + self.cs/2.0
 
     def CellTop(self,ir,jc):
-        if self.rot != 0.0: print("definition.CellTop error")
+        if self.rot != 0.0: print("definition.CellTop error: rotation no supported")
         return self.cco[ir][jc][1] + self.cs/2.0
 
     def CellBottom(self,ir,jc):
-        if self.rot != 0.0: print("definition.CellBottom error")
+        if self.rot != 0.0: print("definition.CellBottom error: rotation no supported")
         return self.cco[ir][jc][1] - self.cs/2.0     
 
     def pointToRowCol(self,xy):
@@ -326,16 +326,25 @@ class GDEF:
 
     def saveBinary(self,fp,dat):
         if type(dat)==dict:
-            a = np.full(self.shape(),-9999.0,dtype='float64')
-            for cid,v in dat.items(): a[self.RowCol(cid)] = v
-            if os.path.exists(fp): os.remove(fp)
-            a.tofile(fp) # always saved in C-order (row-major)
+            fn, ext = os.path.splitext(fp)
+            if ext==".real":
+                a = np.array(dict(sorted(dat.items())).values, dtype=np.float64)
+                if os.path.exists(fp): os.remove(fp)
+                a.tofile(fp)
+            elif ext==".bil":
+                a = np.full(self.shape(),-9999.0,dtype=np.float32)
+                for cid,v in dat.items(): a[self.RowCol(cid)] = v
+                if os.path.exists(fp): os.remove(fp)
+                a.tofile(fp) # always saved in C-order (row-major)
+                self.toHDR(fn+'.hdr')
+            else:
+                print('unknown file type: {}'.format(ext))
         else:
             pass
 
     def saveBitmap(self,fp,dat):
         if type(dat)==dict:
-            a = np.full(self.shape(),-9999.0,dtype='float32')
+            a = np.full(self.shape(),-9999.0,dtype=np.float32)
             for cid,v in dat.items(): a[self.RowCol(cid)] = v
             if os.path.exists(fp): os.remove(fp)
             img = Image.fromarray(a)

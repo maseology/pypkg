@@ -21,7 +21,7 @@ class build():
         files.mkDir(self.root+self.nam)
 
     def __read(self, fp):
-        print("\nReading: " + fp + " ...\n")
+        print("\nReading: " + fp + " ...")
         self.root = files.getFileDir(fp) + '\\'
         self.nam = files.getFileName(fp)
         ss = ""
