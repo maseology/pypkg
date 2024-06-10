@@ -98,6 +98,9 @@ class GDEF:
         #         cid+=1
         # self.ncell=cid
 
+    def Centroids(self):
+        return self.cco.reshape(self.nrow*self.ncol,-1)
+
     def CellID(self,ir,jc):
         return ir * self.ncol + jc
 
@@ -110,6 +113,8 @@ class GDEF:
         return (i,j)
 
     def Actives(self): return list(itertools.chain(*self.act)) # list of boolean
+
+    def ActiveIDs(self): return np.arange(self.nrow*self.ncol)[self.act.reshape(self.nrow*self.ncol)>0]
 
     def ActiveMask(self): return np.array(self.Actives(), np.int32).reshape(self.shape())
 
@@ -166,6 +171,19 @@ class GDEF:
             p = self.pointToRowCol(v)
             if p is not None: dout[k] = self.rcc[p] # != (-1,-1)
         return dout # pointID{cellID}
+    
+    def extentToCellIDs(self,ext):
+        # (xmin, ymin, xmax, ymax)
+        lout = list()
+        pul = self.pointToRowCol((ext[0],ext[3]))
+        plr = self.pointToRowCol((ext[2],ext[1]))
+        if pul is None and plr is None: return
+        if pul is None: pul=(0,0)
+        if plr is None: plr=(self.nrow-1,self.ncol-1)
+        for i in range(pul[0],plr[0]+1):
+            for j in range(pul[1],plr[1]+1):
+                lout.append(self.rcc[(i,j)])
+        return lout
 
     def adjacentCells(self):
         d = dict()
@@ -191,8 +209,9 @@ class GDEF:
             d[cid] = l
         return d
 
-    def shape(self):
-        return (self.nrow,self.ncol)
+
+    def shape(self): return (self.nrow,self.ncol)
+
 
     def contains(self,x,y,buffer=0):
         if x > self.extent[2] + buffer: return False

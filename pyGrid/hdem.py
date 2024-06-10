@@ -21,15 +21,16 @@ class HDEM:
     fp = None
     us = None
 
-    def __init__(self, filepath, skipflowpaths=False):        
+    def __init__(self, filepath, skipflowpaths=False):      
+
         gdfp = filepath+".gdef" # mmio.removeExt(filepath)+".gdef"
         if not os.path.exists(gdfp):
             gdfp = mmio.removeExt(filepath)+".gdef"
             if not os.path.exists(gdfp):
                 print('error no grid definition file available: ',gdfp,'\n')
                 quit()
-
         self.gd = GDEF(gdfp)
+
         print(' loading', filepath)
 
         ext = mmio.getExtension(filepath)
@@ -123,3 +124,29 @@ class HDEM:
         lst = self.Climb(cid)
         return self.gd.cs*self.gd.cs*len(lst)
  
+    def Crop(self, gd):
+        if self.gd.ncell == gd.ncell: return # naive assumption, might fail
+        print('  cropping TEM..')
+        newact = set(gd.ActiveIDs())
+        newtem = dict()
+        for k,v in self.tem.items():
+            if k in newact: newtem[k] = v
+
+        if self.fp is not None:
+            newfp = dict()
+            for k,v in self.fp.items():
+                if k in newact:
+                    s = 0
+                    newfp[k] = dict()
+                    for kk,vv in v.items():
+                        if kk in newact:
+                            newfp[k][kk]=vv
+                            s+=vv
+                    if s != 1:
+                        for kk,vv in newfp[k].items():
+                            newfp[k][kk] /= s
+
+        if self.us is not None:
+            print('ERROR TODO: tem.Crop need to crop upslopes............')
+
+        self.gd = gd

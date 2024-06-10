@@ -113,7 +113,8 @@ def hysep(v, N):
     s = v.rolling(str(twoNs)+'D').min()[twoNs-1::twoNs]
     s.rename(columns={'Val': 'FI'}, inplace=True)
     vv = v.merge(s, how='left', on='Date') 
-    vv['FI'].fillna(method="bfill", inplace=True)
+    # vv['FI'].fillna(method="bfill", inplace=True)
+    vv['FI'].bfill(inplace=True)
 
     s = v.rolling(str(twoNsm1)+'D').min()
     s.rename(columns={'Val': 'SI'}, inplace=True)

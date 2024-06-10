@@ -48,8 +48,8 @@ class Watershed:
 
         if os.path.exists(topofp):
             for ln in ascii.readCSV(topofp):
-                sid = int(ln[0])
-                dsid = int(ln[1])
+                sid = int(ln[1])
+                dsid = int(ln[2])
                 # dcid = int(ln[2])
                 if selection != None: 
                     if not dsid in selection: continue
@@ -135,8 +135,10 @@ class Watershed:
                 if len(x)!=1: print("WARNING more than 1 downslope " + str(u))
                 if x[0]<0: 
                     d=x[0]
-                else:
+                elif x[0] in sws.x:
                     d=sws.x[x[0]]
+                else:
+                    d=-1
                 # self.t[k] = (u, d) # {ordered id: (from swsid, to swsid)}
                 f.write("{},{},{}\n".format(k, u, d))
 
