@@ -5,7 +5,7 @@ from pyDrology import properties as p
 # Penman (1948) based solely on the wind function
 # see Novak 182
 def PenmanWind(t, rh, u, a, b):
-    if t < -30 or t > 50: print(" Warning PenmanWind: temperature out of range: "+str(t))
+    if t < -35 or t > 50: print(" Warning PenmanWind: temperature out of range: "+str(t))
     if rh < 0 or rh > 1: print(" Warning PenmanWind: relative humidity out of range: "+str(rh))
     if u < 0 or u > 100: print(" Warning PenmanWind: unexpected wind speed: "+str(u))
     de = p.vapourPressureDeficit(t, rh) # [Pa]
