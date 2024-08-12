@@ -32,6 +32,8 @@ class Watershed:
         if selection != None:
             if type(selection) is list:
                 self.xr = { k: idx.a[k] for k in selection } 
+            elif type(selection) is set:
+                self.xr = { k: idx.a[k] for k in selection }                 
             elif type(selection) is int:
                 if hdem is None:
                     print('error: sws selection type int requires an hdem')

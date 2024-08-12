@@ -17,7 +17,15 @@ class build():
         self.params =  {k.lower(): v for k, v in self.params.items()} # converting all to lower case
         for k, v in self.params.items():
             if type(v) == dict:
-                   self.params[k] =  {kk.lower(): vv for kk, vv in v.items()} # converting all to lower case
+                islist = True
+                for kk, vv in v.items():
+                    if not kk.isnumeric() or not vv: 
+                        islist=False
+                        break
+                if islist:
+                    self.params[k] = [int(kk) for kk in v.keys()]
+                else:
+                    self.params[k] =  {kk.lower(): vv for kk, vv in v.items()} # converting all to lower case
         files.mkDir(self.root+self.nam)
 
     def __read(self, fp):
