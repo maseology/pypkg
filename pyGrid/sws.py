@@ -4,6 +4,7 @@ import numpy as np
 from pymmio import files as mmio
 from pymmio import ascii
 from pyGrid.indx import INDX
+from pyGrid.real import REAL
 from pyproj import Proj
 from tqdm import tqdm
 
@@ -69,6 +70,7 @@ class Watershed:
 
         self.__buildSWS(hdem, selection, epsg)
 
+
     def __buildSWS(self, hdem, sel, epsg):        
         self.s = dict()
         ca = hdem.gd.cs**2
@@ -87,23 +89,33 @@ class Watershed:
             sax = 0.0
             say = 0.0
             sca = 0.0
-            for cid in v:
-                sca += ca
-                tec = hdem.tem[cid]
-                if tec.x==-9999:
+            if type(hdem)==REAL:
+                for cid in v:
+                    sca += ca
                     i,j = hdem.gd.crc[cid]
                     cc = hdem.gd.cco[i][j]
                     sx += cc[0]
                     sy += cc[1]
-                else:
-                    sx += tec.x
-                    sy += tec.y
-                sz += tec.z
-                if tec.g > 0: 
-                    sg += tec.g
+                    sz += hdem.x[cid]
                     sgn += 1
-                sax += math.sin(tec.a)
-                say += math.cos(tec.a)
+            else:
+                for cid in v:
+                    sca += ca
+                    tec = hdem.tem[cid]
+                    if tec.x==-9999:
+                        i,j = hdem.gd.crc[cid]
+                        cc = hdem.gd.cco[i][j]
+                        sx += cc[0]
+                        sy += cc[1]
+                    else:
+                        sx += tec.x
+                        sy += tec.y
+                    sz += tec.z
+                    if tec.g > 0: 
+                        sg += tec.g
+                        sgn += 1
+                    sax += math.sin(tec.a)
+                    say += math.cos(tec.a)
 
             n = len(v)
             ss = SWS()
