@@ -7,7 +7,7 @@ class Prism:
     t = 0.0    # top
     b = 0.0    # bottom
 
-    def __init__(self,verts, top, bottom): #, connectivity=None):        
+    def __init__(self, verts, top, bottom): #, connectivity=None):        
         if len(verts) < 3: print("prism.Prism error: vertically flat prism")
         if top <= bottom: print("prism.Prism error: flat prism (top <= bottom)")
         self.v = verts

@@ -116,7 +116,7 @@ class GDEF:
 
     def ActiveIDs(self): return np.arange(self.nrow*self.ncol)[self.act.reshape(self.nrow*self.ncol)>0]
 
-    def ActiveMask(self): return np.array(self.Actives(), np.int32).reshape(self.shape())
+    def ActiveMask(self): return np.array(self.Actives(), np.int32).reshape(self.shape()) != 0
 
     def setActives(self, actives):
         self.act = actives # np.array(actives.tolist())[:self.nrow*self.ncol].reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
@@ -223,7 +223,7 @@ class GDEF:
 
 
     ### IMPORT
-    def LoadBinary(self,fp, rowmajor=True):
+    def LoadBinary(self, fp, rowmajor=True):
         ord = (self.nrow,self.ncol)
         if not rowmajor: ord = (self.ncol,self.nrow)
         try:
@@ -236,6 +236,11 @@ class GDEF:
                 quit()
         if not rowmajor: a = np.swapaxes(a,0,1)  
         return a
+    
+    def LoadBinaryActiveList(self, fp, rowmajor=True):
+        g = self.LoadBinary(fp,rowmajor).reshape(self.ncol*self.nrow)
+        m = self.ActiveMask().reshape(self.ncol*self.nrow)
+        return g[m]
                 
     def LoadIntBinary(self,fp):
         try:
@@ -393,3 +398,18 @@ class GDEF:
             f.write('XDIM           '+str(self.cs)+'\n')
             f.write('YDIM           '+str(self.cs)+'\n')
             f.write('NODATA         '+str(nodata)+'\n')
+
+
+def BuildUniformGridDefinition(nr,nc,cs=1.0):
+    gd = GDEF()
+    gd.xul=0.0
+    gd.yul=nr*cs
+    gd.rot=0.0
+    gd.nrow=nr
+    gd.ncol=nc
+    gd.cs=cs
+    gd.unif=True
+    gd.extent = (gd.xul, gd.yul-gd.nrow*gd.cs, gd.xul+gd.ncol*gd.cs, gd.yul) # (xmin, ymin, xmax, ymax)
+    gd.active=False
+    gd.build()
+    return gd

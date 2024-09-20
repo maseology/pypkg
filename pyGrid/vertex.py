@@ -130,6 +130,7 @@ class VDEF:
         
         if len(rem2) > 0:
             for nid in list(set(rem2)):
+                if nid is None: continue
                 del self.nodecells[nid]
                 del self.nodecoord[nid]
 

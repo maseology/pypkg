@@ -1,5 +1,6 @@
 
 import random
+import copy
 import numpy as np
 import statistics
 from pyGrid import definition, vertex
@@ -21,6 +22,8 @@ class Layer:
                     self.__buildGDEFarray(geom)
                 else:
                     print("Layer.__init__ error 000")
+                for pp in self.prsms.values():
+                    pp.v = [pp.v[i] for i in [0,2,3,1]] # re-order from VTK to clockwise
             elif type(geom[0]) == vertex.VDEF:
                 self.__buildVDEFlayered(geom)
             else:
@@ -80,9 +83,11 @@ class Layer:
         vg = vertex.VDEF(gd) # vertex grid  
         vg.RemoveCellsNonActives()
         da = 0.0
+        xr = dict()
         for ly in range(len(dp)):
             for cid in gd.crc:
                 pid = ly*nc + cid
+                xr[pid]=len(xr)
                 verts = list()
                 con = list()
 
@@ -99,13 +104,28 @@ class Layer:
                 if ly > 0:
                     xid = (ly-1)*nc + cid
                     con.append(xid) # above
+                else:
+                    con.append(-1)
                 if ly < len(dp)-1:
                     xid = (ly+1)*nc + cid
                     con.append(xid) # below
+                else:
+                    con.append(-1)
 
                 self.prsms[pid].c = con
             da -= dp[ly]
-        pass
+
+        if gd.nrow*gd.ncol*len(dp) != len(xr): # grid likely has active cells, need to 0-index array
+            zeroprisms = dict()
+            for i, p in self.prsms.items():
+                zeroprisms[xr[i]] = copy.copy(p)
+                zeroprisms[xr[i]].c = list()
+                for cc in p.c:
+                    if cc==-1:
+                        zeroprisms[xr[i]].c.append(-1)
+                    else:
+                        zeroprisms[xr[i]].c.append(xr[cc])
+            self.prsms = zeroprisms
 
     def __buildGDEFarray(self,geom):
         gd = geom[0] # grid definition        

@@ -1,5 +1,5 @@
 
-import re, json
+import os, re, json
 from datetime import datetime
 from pymmio import ascii, files
 
@@ -35,6 +35,7 @@ class build():
         ss = ""
         skip = False
         for ln in ascii.readLines(fp):
+            if len(ln)==0: continue
 
             # commented out            
             if ln[0]=='!': continue
@@ -73,7 +74,7 @@ class build():
                 continue
 
             # global settings/parameters
-            if ln[0].lower()=="description": 
+            if ln[0].lower()=="description" or ln[0].lower()=="desc": 
                 self.desc = ln[1]
                 continue
 
@@ -83,13 +84,14 @@ class build():
 
             if ln[0].lower()=="dtb" or ln[0].lower()=="dte":
                 self.params[ln[0].lower()] = datetime.strptime(ln[1], '%Y-%m-%d')
-                continue           
+                continue
 
             v = self.__parsep(ln)
             self.params[v[0]]=v[1]       
 
 
     def __parsep(self,splitline):
+        if len(splitline)==1: splitline = re.split(r'\s+', splitline[0]) # try space-delimited
         if len(splitline)==1:
             return splitline[0], True
         elif len(splitline)==2:
@@ -122,7 +124,9 @@ class build():
             return splitline[0], splitline[1:]
 
     def FilePath(self,parnam):
-        return self.root + self.params[parnam]
+        if not os.path.exists(self.params[parnam]):
+            return self.root + self.params[parnam]
+        return self.params[parnam]
 
     def print(self):        
         if len(self.desc) == 0: 
