@@ -15,6 +15,8 @@ class INDX:
                 self.gd = GDEF(fp + ".gdef")
             elif os.path.exists(mmio.removeExt(fp)+".gdef"):
                 self.gd = GDEF(mmio.removeExt(fp)+".gdef")
+            elif os.path.exists(mmio.removeExt(fp)+".hdr"):
+                self.gd = GDEF(mmio.removeExt(fp)+".hdr")                
             else:
                 print('INDX.__init__ grid definition cannot be found')
                 quit()                
@@ -32,11 +34,11 @@ class INDX:
         if len(aa) == self.gd.nrow*self.gd.ncol:
             self.x = dict(zip(np.arange(self.gd.nrow*self.gd.ncol),aa))
         elif len(aa) == self.gd.nrow*self.gd.ncol/2:
-            aa = np.fromfile(fp,np.int16).reshape(gd.act.shape)
+            aa = np.fromfile(fp,np.int16).reshape(self.gd.act.shape)
             self.x = {}
             for k,v in self.gd.crc.items(): self.x[k] = aa[v]    
         elif len(aa) == self.gd.nrow*self.gd.ncol/4:
-            aa = np.fromfile(fp,np.uint8).reshape(gd.act.shape)
+            aa = np.fromfile(fp,np.uint8).reshape(self.gd.act.shape)
             self.x = {}
             for k,v in self.gd.crc.items(): self.x[k] = aa[v]                        
         elif len(aa) != len(self.gd.crc):

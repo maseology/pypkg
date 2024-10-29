@@ -14,6 +14,8 @@ class REAL:
                 self.gd = GDEF(fp + ".gdef")
             elif os.path.exists(mmio.removeExt(fp)+".gdef"):
                 self.gd = GDEF(mmio.removeExt(fp)+".gdef")
+            elif os.path.exists(mmio.removeExt(fp)+".hdr"):
+                self.gd = GDEF(mmio.removeExt(fp)+".hdr")                
             else:
                 print('REAL.__init__ grid definition cannot be found')
                 quit()                

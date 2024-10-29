@@ -5,7 +5,7 @@ import numpy as np
 from scipy.interpolate import griddata
 import itertools
 from bitarray import bitarray
-from PIL import Image
+from PIL import Image, ImageDraw
 from tqdm import tqdm
 
 
@@ -21,43 +21,56 @@ class GDEF:
     def __init__(self, filepath=None, prnt=True):
         if filepath==None: return
         if prnt: print(' loading', filepath)
-        try:
-            with open(filepath, 'rb') as f:
-                self.xul=float(f.readline()) # UL corner
-                self.yul=float(f.readline()) # UL corner
-                self.rot=float(f.readline())
-                self.nrow=int(f.readline())
-                self.ncol=int(f.readline())
-                cs=f.readline()
-                if chr(cs[0])=='U': self.unif=True
-                
-                self.cs=float(cs[1:])
+        _, ext = os.path.splitext(filepath)
+        if ext=='.hdr':
+            self.readHDR(filepath)
+            self.unif=True
+            self.rot=0
+            self.extent = (self.xul, self.yul-self.nrow*self.cs, self.xul+self.ncol*self.cs, self.yul) # (xmin, ymin, xmax, ymax)
+            self.active=False
+            self.build()
+        elif ext=='.gdef':
+            try:
+                with open(filepath, 'rb') as f:
+                    self.xul=float(f.readline()) # UL corner
+                    self.yul=float(f.readline()) # UL corner
+                    self.rot=float(f.readline())
+                    self.nrow=int(f.readline())
+                    self.ncol=int(f.readline())
+                    cs=f.readline()
+                    if chr(cs[0])=='U': self.unif=True
+                    
+                    self.cs=float(cs[1:])
 
-                if self.rot!=0.0: print(' rotated gdef currently unsupported')
-                if not self.unif: print(' variable cell size currently unsupported')
+                    if self.rot!=0.0: print(' rotated gdef currently unsupported')
+                    if not self.unif: print(' variable cell size currently unsupported')
 
-                self.extent = (self.xul, self.yul-self.nrow*self.cs, self.xul+self.ncol*self.cs, self.yul) # (xmin, ymin, xmax, ymax)
-                bact = f.read()
-                if bact == b'':
-                    self.active=False
-                else:
-                    ba = bitarray(endian='little')
-                    ba.frombytes(bact) 
-                    ac = np.array(ba.tolist())[:self.nrow*self.ncol]
-                    self.act = ac.reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
-                    # cu = np.array([sum(ac[0:x:1]) for x in range(0, len(ac)+1)][1:])
-                    # cu[ac==False] = -9998
-                    # cu-=1
-                    # self.ac = dict(zip(cu, np.arange(self.nrow*self.ncol,dtype=int)))
-                    # self.ac.pop(-9999) # active id to cell id (took way too long)
-                    self.active=True
-                self.build()
-        except FileNotFoundError:
-            print(' grid definition file:',filepath,'not found.')
+                    self.extent = (self.xul, self.yul-self.nrow*self.cs, self.xul+self.ncol*self.cs, self.yul) # (xmin, ymin, xmax, ymax)
+                    bact = f.read()
+                    if bact == b'':
+                        self.active=False
+                    else:
+                        ba = bitarray(endian='little')
+                        ba.frombytes(bact) 
+                        ac = np.array(ba.tolist())[:self.nrow*self.ncol]
+                        self.act = ac.reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
+                        # cu = np.array([sum(ac[0:x:1]) for x in range(0, len(ac)+1)][1:])
+                        # cu[ac==False] = -9998
+                        # cu-=1
+                        # self.ac = dict(zip(cu, np.arange(self.nrow*self.ncol,dtype=int)))
+                        # self.ac.pop(-9999) # active id to cell id (took way too long)
+                        self.active=True
+                    self.build()
+            except FileNotFoundError:
+                print(' grid definition file:',filepath,'not found.')
+                quit()
+            except Exception as err:
+                print('error reading grid definition file:',filepath,'\n',err)
+                quit()
+        else:
+            print('error: unknown grid definition file format:',filepath)
             quit()
-        except Exception as err:
-            print('error reading grid definition file:',filepath,'\n',err)
-            quit()
+
 
     def build(self):         
         if self.active:
@@ -172,6 +185,16 @@ class GDEF:
             if p is not None: dout[k] = self.rcc[p] # != (-1,-1)
         return dout # pointID{cellID}
     
+    def polygonToCellIDs(self,polygon):
+        # modified from https://stackoverflow.com/questions/3654289/scipy-create-2d-polygon-mask
+        # polygon = [(x1,y1),(x2,y2),...] or [x1,y1,x2,y2,...]
+        img = Image.new('L', (self.ncol, self.nrow), 0)
+        offset = [self.xul, self.yul-self.nrow*self.cs]
+        pixelpoly = [((x-offset[0])/self.cs, self.nrow-(y-offset[1])/self.cs) for x,y in polygon]
+        ImageDraw.Draw(img).polygon(pixelpoly, outline=1, fill=1)
+        mask = np.array(img)
+        return np.arange(self.nrow*self.ncol)[mask.reshape(self.nrow*self.ncol)>0]
+    
     def extentToCellIDs(self,ext):
         # (xmin, ymin, xmax, ymax)
         lout = list()
@@ -223,6 +246,31 @@ class GDEF:
 
 
     ### IMPORT
+    def readHDR(self,filepath):
+        with open(filepath, 'r') as f:
+            for ln in f:
+                if len(ln)==0: continue
+                stp = ln.strip().split()
+                # print(stp)
+                match stp[0].upper():
+                    case 'BYTEORDER' | 'LAYOUT' | 'NBANDS' | 'NBITS' | 'PIXELTYPE' | 'NODATA':
+                        pass
+                    case 'NROWS':
+                        self.nrow=int(stp[1])
+                    case 'NCOLS':
+                        self.ncol=int(stp[1])
+                    case 'ULXMAP':
+                        self.xul=float(stp[1]) # UL corner
+                    case 'ULYMAP':
+                        self.yul=float(stp[1]) # UL corner   
+                    case 'XDIM' | 'YDIM':
+                        self.cs=float(stp[1]) # assuming uniform grids                                      
+                    case _:
+                        print('unknown .hdr argument:',stp[0])
+        self.xul -= self.cs/2 # The x-axis map coordinate of the center of the upper-left pixel.
+        self.yul += self.cs/2 # The y-axis map coordinate of the center of the upper-left pixel.
+
+
     def LoadBinary(self, fp, rowmajor=True):
         ord = (self.nrow,self.ncol)
         if not rowmajor: ord = (self.ncol,self.nrow)
@@ -345,8 +393,13 @@ class GDEF:
             for cid,v in dat.items(): a[self.RowCol(cid)] = int(v)
             if os.path.exists(fp): os.remove(fp)
             a.tofile(fp) # always saved in C-order (row-major)
+        elif type(dat)==np.ndarray:
+            if os.path.exists(fp): os.remove(fp)
+            fn, ext = os.path.splitext(fp)
+            dat.tofile(fp)
+            if ext==".bil": self.toHDR(fn+'.hdr',pixeltype='SIGNEDINT32')
         else:
-            pass
+            print('saveBinaryInt error, unsupported type:',type(dat))
 
     def saveBinary(self,fp,dat):
         if type(dat)==dict:
@@ -382,7 +435,7 @@ class GDEF:
         else:
             pass
 
-    def toHDR(self,fp,nodata=-9999):
+    def toHDR(self,fp,nodata=-9999,pixeltype='FLOAT'):
         with open(fp, 'w') as f:
             f.write('BYTEORDER      I\n')
             f.write('LAYOUT         BIL\n')
@@ -392,7 +445,7 @@ class GDEF:
             f.write('NBITS          32\n')
             f.write('BANDROWBYTES   '+str(self.nrow*4)+'\n')
             f.write('TOTALROWBYTES  '+str(self.nrow*4)+'\n')
-            f.write('PIXELTYPE      FLOAT\n')
+            f.write('PIXELTYPE      '+pixeltype+'\n')
             f.write('ULXMAP         '+str(self.xul+self.cs/2)+'\n') # The x-axis map coordinate of the center of the upper-left pixel.
             f.write('ULYMAP         '+str(self.yul-self.cs/2)+'\n') # The y-axis map coordinate of the center of the upper-left pixel.
             f.write('XDIM           '+str(self.cs)+'\n')
