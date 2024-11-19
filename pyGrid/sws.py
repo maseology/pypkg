@@ -23,11 +23,22 @@ class SWS:
 class Watershed:
     xr = dict() # swsid: [cell ids]
     t = dict()  # swsid: downswsid  # ordered id: (from swsid, to swsid)
+    d = dict()  # downswsid: [swsid]
     s = dict()  # swsid: SWS
     nam = dict() # swsid: name
+    lak = dict() # is lake?
     gag = dict() # swsid: gauge name
 
     def __init__(self, fp=None, hdem=None, selection=None, epsg=3161):
+        if fp is None and hdem is None: 
+            self.xr = dict()
+            self.t = dict()
+            self.d = dict()
+            self.s = dict()
+            self.nam = dict()
+            self.lak = dict()
+            self.gag = dict()
+            return
         if type(hdem) is REAL:
             sf = shapefile.Reader(fp)
             geom = sf.shapes()
@@ -40,6 +51,7 @@ class Watershed:
                 self.t[sid] = int(attr[i].DowSubId)
                 self.nam[sid] = attr[i].rvhName
                 self.gag[sid] = attr[i].gauge
+                self.lak[sid] = attr[i].lake != 0
                 # print(len(self.xr[sid])*hdem.gd.cs*hdem.gd.cs/1000000)
             if not os.path.exists(fp+'-swsid.bil'):
                 out = np.full(hdem.gd.ncol*hdem.gd.nrow,-9999)
@@ -90,7 +102,6 @@ class Watershed:
             #     if d==-1:continue
             #     if d not in self.t:
             #         print("topo ERROR {}; {}".format(u,d))
-
         else:
             print('watershed.__init__ error: unknown dem type:',type(hdem))
             quit()
@@ -187,11 +198,39 @@ class Watershed:
 
     def outlets(self):
         tt, o = set(), set()
-        for _,t in self.t.items(): tt.add(t[0])
+        for _,t in self.t.items(): tt.add(t)
         for t in self.xr:
             if t in tt: continue
             o.add(int(t))
         return list(o)
+
+    def climb(self, wid):
+        if len(self.d)==0:
+            for k,v in self.t.items():
+                if v in self.d:
+                    self.d[v].append(k)
+                else:
+                    self.d[v] = [k]
+        wids = list()
+        def recurse(wid):
+            wids.append(wid)
+            if wid in self.d:
+                for uw in self.d[wid]:
+                    recurse(uw)
+        recurse(wid)
+        return wids
+
+    def subset(self, wid):
+        out = Watershed()
+        wids = self.climb(wid)
+        for uw in wids:
+            out.xr[uw] = self.xr[uw]
+            out.t[uw] = self.t[uw]
+            out.s[uw] = self.s[uw]
+            out.nam[uw] = self.nam[uw]
+            out.lak[uw] = self.lak[uw]
+            out.gag[uw] = self.gag[uw]
+        return out
 
     def saveToIndx(self,fp):
         a = dict()

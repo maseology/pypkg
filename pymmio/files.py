@@ -32,6 +32,9 @@ def dirList(directory, ext="", recursive=True):
 def deleteDir(directory):
     shutil.rmtree(directory)
 
+def deletefile(fp):
+    if os.path.exists(fp): os.remove(fp)
+
 def removeExt(fp):
     return(os.path.splitext(fp)[0])
 
