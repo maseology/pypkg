@@ -3,6 +3,7 @@ import os, struct
 import numpy as np
 from pymmio import files as mmio
 from pyGrid.definition import GDEF
+from pyGrid.real import REAL
 # import sys
 # sys.setrecursionlimit(10**5)
 
@@ -21,7 +22,8 @@ class HDEM:
     fp = None
     us = None
 
-    def __init__(self, filepath, skipflowpaths=False):      
+    def __init__(self, filepath=None, skipflowpaths=False):
+        if filepath is None: return
 
         gdfp = filepath+".gdef" # mmio.removeExt(filepath)+".gdef"
         if not os.path.exists(gdfp):
@@ -38,6 +40,8 @@ class HDEM:
             self.__loadUHDEM(filepath,skipflowpaths)
         elif ext == '.hdem':
             self.__loadHDEM(filepath,skipflowpaths)
+        elif ext == '.bil':
+            self.__loadBIL(filepath,skipflowpaths)
         else:
             print("error: unsupported HDEM format\n")
             quit()
@@ -52,7 +56,6 @@ class HDEM:
             self.tem[c] = tec(x,y,z,g,s)
 
         if not skipflowpaths: print(' ** TODO: HDEM flowpaths not read **')
-
 
     def __loadUHDEM(self,filepath,skipflowpaths):
         # THIS IS VERY SLOW!!!!
@@ -96,6 +99,18 @@ class HDEM:
         except Exception as err:
             print('error reading hdem file:',filepath,'\n',err)
             quit()
+
+    def __loadBIL(self,filepath,skipflowpaths):
+        z = REAL(filepath)
+        g, a = z.slopeAspectTarboton()
+        cxy = self.gd.cco
+        self.tem = dict()
+        for c,rc in self.gd.crc.items():
+            x,y = cxy[rc]
+            self.tem[c] = tec(x,y,z.x[c],g[c],a[c])
+
+        if not skipflowpaths: print(' ** TODO: BIL flowpaths not built **')
+
 
     def BuildUpslopes(self):
         print('  building upslopes..')

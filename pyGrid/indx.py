@@ -22,7 +22,7 @@ class INDX:
                 quit()                
         else:
             self.gd = gd
-        aa = np.fromfile(fp,int) #.reshape(gd.na)
+        aa = np.fromfile(fp,np.int32) #.reshape(gd.na)
 
         # elif mmio.getExtension(fp).lower()==".bil":
         #     pass

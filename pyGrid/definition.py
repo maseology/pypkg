@@ -72,7 +72,7 @@ class GDEF:
             quit()
 
 
-    def build(self):         
+    def build(self):
         if self.active:
             self.ncell = np.sum(self.act) # n actives
             a = np.arange(self.nrow*self.ncol,dtype=int).reshape(self.nrow,self.ncol)
