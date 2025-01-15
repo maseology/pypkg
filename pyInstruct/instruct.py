@@ -9,6 +9,7 @@ class build():
     desc = ""
     root = ""
     nam = ""
+    sfx = ""
     mode = ""
     params = dict()
 
@@ -26,7 +27,7 @@ class build():
                     self.params[k] = [int(kk) for kk in v.keys()]
                 else:
                     self.params[k] =  {kk.lower(): vv for kk, vv in v.items()} # converting all to lower case
-        files.mkDir(self.root+self.nam)
+        # files.mkDir(self.root+self.nam)
 
     def __read(self, fp):
         print("\nReading: " + fp + " ...")
@@ -76,6 +77,10 @@ class build():
             # global settings/parameters
             if ln[0].lower()=="description" or ln[0].lower()=="desc": 
                 self.desc = ln[1]
+                continue
+
+            if ln[0].lower()=="sfx": 
+                self.sfx = ln[1]
                 continue
 
             if ln[0].lower()=="mode": 

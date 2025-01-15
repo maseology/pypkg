@@ -19,10 +19,7 @@ class SWS:
     slp = 0.0
     asp = 0.0
     rchlen = 0.0
-    chanwidth = 0.0
-    floodplwidth = 0.0
-    chanrough = 0.0
-    floodplrough = 0.0
+
 
 class Watershed:
     xr = dict() # swsid: [cell ids]
@@ -32,31 +29,45 @@ class Watershed:
     nam = dict() # swsid: name
     lak = dict() # is lake?
     gag = dict() # swsid: gauge name
+    haschans = False # True if channel parameters are specified
+    info = dict()
 
     def __init__(self, fp=None, hdem=None, selection=None, epsg=3161):
         if fp is None and hdem is None: 
-            self.xr = dict()
-            self.t = dict()
-            self.d = dict()
-            self.s = dict()
+            self.xr = dict() 
+            self.t = dict()  
+            self.d = dict()  
+            self.s = dict()  
             self.nam = dict()
             self.lak = dict()
             self.gag = dict()
+            self.info = dict()
             return
         
+        ord = dict() # swsid: outlet (strahler) stream order
+        chanwidth = dict() # swsid: outlet channel width
+        valleywidth = dict() # swsid: outlet outlet floodplain width (if <= chanwidth, assumes trapezoidal channel)
+        chanrough = dict() # swsid: outlet channel roughness
+        floodplrough = dict() # swsid: outlet floodplain roughness
         if mmio.getExtension(fp)=='.shp':
             sf = shapefile.Reader(fp)
             geom = sf.shapes()
             # feld = sf.fields # see field names
             attr = sf.records()
             for i in range(len(geom)):
-                # print(attr[i])
-                sid = int(attr[i].SubId)
+                a = attr[i]
+                # print(a)
+                sid = int(a.SubId)
                 self.xr[sid] = hdem.gd.polygonToCellIDs(geom[i].points)
-                self.t[sid] = int(attr[i].DowSubId)
-                self.nam[sid] = attr[i].rvhName
-                self.gag[sid] = attr[i].gauge
-                self.lak[sid] = attr[i].lake != 0
+                self.t[sid] = int(a.DowSubId)
+                self.nam[sid] = a.rvhName
+                self.gag[sid] = a.gauge
+                if hasattr(a, 'lake'): self.lak[sid] = a.lake != 0
+                if hasattr(a, 'strahler'): ord[sid] = a.strahler
+                if hasattr(a, 'wchan'): chanwidth[sid] = a.wchan
+                if hasattr(a, 'wflood'): valleywidth[sid] = a.wflood
+                if hasattr(a, 'nchan'): chanrough[sid] = a.nchan
+                if hasattr(a, 'nflood'): floodplrough[sid] = a.nflood
                 # print(len(self.xr[sid])*hdem.gd.cs*hdem.gd.cs/1000000)
             if not os.path.exists(fp+'-swsid.bil'):
                 out = np.full(hdem.gd.ncol*hdem.gd.nrow,-9999)
@@ -135,6 +146,18 @@ class Watershed:
         #     quit()
 
         self.__buildSWS(hdem, selection, epsg)
+        for t in self.xr:
+            if t in chanwidth: 
+                self.s[t].chanwidth = chanwidth[t]
+                self.s[t].valleywidth = 0.0
+                self.s[t].chanrough = 0.0
+                self.s[t].floodplrough = 0.0
+                self.s[t].ord = -1
+                self.haschans = True            
+            if t in ord: self.s[t].ord = ord[t]
+            if t in valleywidth: self.s[t].valleywidth = valleywidth[t]
+            if t in chanrough: self.s[t].chanrough = chanrough[t]
+            if t in floodplrough: self.s[t].floodplrough = floodplrough[t]
 
 
     def __buildSWS(self, hdem, sel, epsg):        
@@ -243,14 +266,25 @@ class Watershed:
 
     def subset(self, wid):
         out = Watershed()
-        wids = self.climb(wid)
-        for uw in wids:
-            out.xr[uw] = self.xr[uw]
-            out.t[uw] = self.t[uw]
-            out.s[uw] = self.s[uw]
-            out.nam[uw] = self.nam[uw]
-            out.lak[uw] = self.lak[uw]
-            out.gag[uw] = self.gag[uw]
+        if type(wid)==int:
+            wids = self.climb(wid)
+            for uw in wids:
+                out.xr[uw] = self.xr[uw]
+                out.t[uw] = self.t[uw]
+                out.s[uw] = self.s[uw]
+                out.nam[uw] = self.nam[uw]
+                out.lak[uw] = self.lak[uw]
+                out.gag[uw] = self.gag[uw]
+                out.haschans = self.haschans
+        elif type(wid)==list:
+             for w in wid:
+                out.xr[w] = self.xr[w]
+                out.t[w] = self.t[w]
+                out.s[w] = self.s[w]
+                out.nam[w] = self.nam[w]
+                out.lak[w] = self.lak[w]
+                out.gag[w] = self.gag[w]
+                out.haschans = self.haschans           
         return out
 
     def saveToIndx(self,fp):
