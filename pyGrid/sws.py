@@ -3,10 +3,10 @@ import os, math
 import numpy as np
 import shapefile
 from pymmio import files as mmio
-from pymmio import ascii
-from pyGrid.indx import INDX
-from pyGrid.real import REAL
-from pyGrid.hdem import HDEM
+# from pymmio import ascii
+# from pyGrid.indx import INDX
+# from pyGrid.real import REAL
+# from pyGrid.hdem import HDEM
 from pyproj import Proj
 from tqdm import tqdm
 

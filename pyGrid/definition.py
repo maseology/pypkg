@@ -388,16 +388,16 @@ class GDEF:
                 print(' gdef.printActives does not support type: ' + str(type(dat)))
 
     def saveBinaryInt(self,fp,dat):
+        fn, ext = os.path.splitext(fp)
+        if ext==".bil": self.toHDR(fn+'.hdr',pixeltype='SIGNEDINT32')
         if type(dat)==dict:
-            a = np.full(self.shape(),-9999.0,dtype=int)
-            for cid,v in dat.items(): a[self.RowCol(cid)] = int(v)
+            a = np.full(self.shape(),-9999,dtype=np.int32)
+            for cid,v in dat.items(): a[self.RowCol(cid)] = np.int32(v)
             if os.path.exists(fp): os.remove(fp)
             a.tofile(fp) # always saved in C-order (row-major)
         elif type(dat)==np.ndarray:
-            if os.path.exists(fp): os.remove(fp)
-            fn, ext = os.path.splitext(fp)
+            if os.path.exists(fp): os.remove(fp)            
             dat.tofile(fp)
-            if ext==".bil": self.toHDR(fn+'.hdr',pixeltype='SIGNEDINT32')
         else:
             print('saveBinaryInt error, unsupported type:',type(dat))
 

@@ -1,5 +1,5 @@
 
-import csv
+import csv, re
 
 def readLines(filepath):
     lout = list()
@@ -35,3 +35,7 @@ def writeLines(fp,lns):
     with open(fp, 'w') as f:
         for ln in lns:
             f.write('{}\n'.format(ln))
+
+def splitSpaceTabLine(line):
+    a = re.split('\s', line)
+    return [s for s in a if len(s) > 0]
