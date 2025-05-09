@@ -83,8 +83,9 @@ def ukih(v, N):
         s.rename(columns={'Val': sukih}, inplace=True)
 
         vv = v.merge(s, on='Date')
-        vv[sukih] = np.where(vv['Val']==vv[sukih], vv[sukih], np.NaN) # turning point
-        vv[sukih].interpolate(method = 'linear', inplace = True) # interpolate
+        vv[sukih] = np.where(vv['Val']==vv[sukih], vv[sukih], np.nan) # turning point
+        # vv[sukih].interpolate(method = 'linear', inplace = True) # interpolate
+        vv[sukih] = vv[sukih].interpolate(method = 'linear')
         vvv = vvv.merge(vv[sukih], on='Date')
 
     vvv['n'] = vvv.iloc[:,-N:].min(axis=1)
@@ -114,14 +115,16 @@ def hysep(v, N):
     s.rename(columns={'Val': 'FI'}, inplace=True)
     vv = v.merge(s, how='left', on='Date') 
     # vv['FI'].fillna(method="bfill", inplace=True)
-    vv['FI'].bfill(inplace=True)
+    # vv['FI'].bfill(inplace=True)
+    vv['FI'] = vv['FI'].bfill()
 
     s = v.rolling(str(twoNsm1)+'D').min()
     s.rename(columns={'Val': 'SI'}, inplace=True)
     vv = vv.merge(s, how='left', on='Date')
 
-    vv['LM'] = np.where(vv['Val']==vv['SI'], vv['SI'], np.NaN) # turning point
-    vv['LM'].interpolate(method = 'linear', inplace = True) # interpolate
+    vv['LM'] = np.where(vv['Val']==vv['SI'], vv['SI'], np.nan) # turning point
+    # vv['LM'].interpolate(method = 'linear', inplace = True) # interpolate
+    vv['LM'] = vv['LM'].interpolate(method = 'linear')
     vv['LM'] = vv[['Val','LM']].min(axis=1)
 
     # print(vv)
@@ -143,16 +146,20 @@ def part(v, N, logdecline = .1):
         s = v.rolling(str(Npart)+'D').min()
         s.rename(columns={'Val': arr}, inplace=True)
         vv = vv.merge(s, how='left', on='Date')
-        vv[arr][vv['Val'] > vv[arr]] = np.NaN
+        # vv[arr][vv['Val'] > vv[arr]] = np.nan
+        vv.loc[vv['Val'] > vv[arr], arr] = np.nan
 
         vv['o1'] = np.log10(vv['Val'])
         vv['o2'] = -vv['o1'].diff()
 
-        vv[arr][vv['o2'] <0] = np.NaN
+        # vv[arr][vv['o2'] <0] = np.nan
+        vv.loc[vv['o2'] <0, arr] = np.nan
         
-        vv[arr][vv['o2'] > logdecline] = np.NaN
+        # vv[arr][vv['o2'] > logdecline] = np.nan
+        vv.loc[vv['o2'] > logdecline, arr] = np.nan
 
-        vv[arr].interpolate(method = 'linear', inplace = True) # interpolate
+        # vv[arr].interpolate(method = 'linear', inplace = True)
+        vv[arr] = vv[arr].interpolate(method = 'linear') # interpolate
         
         vv[arr] = vv[['Val',arr]].min(axis=1)
 
@@ -179,6 +186,13 @@ def clarifica(v):
 
 ########################################################
 # returns grand estimate of baseflow
+########################################################
+def whiteley(v):
+    pass
+
+
+########################################################
+# returns a grand estimate of baseflow
 ########################################################
 def estimateBaseflow(df, dakm2, k):
     dfo = df.copy()
@@ -254,7 +268,7 @@ def estimateBaseflow(df, dakm2, k):
     dfo['part3'] = pt.iloc[:, -1]
 
     # Clarifica Inc., 2002. Water Budget in Urbanizing Watersheds: Duffins Creek Watershed. Report prepared for the Toronto and Region Conservation Authority.
-    dfo['Clarifica'] = clarifica(df)
+    dfo['Clarifica'] = clarifica(df[['Val']])
 
     nc = len(dfo.columns)
     dfo['min'] = dfo.iloc[:,1:nc].min(axis=1)

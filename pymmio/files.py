@@ -1,14 +1,15 @@
 
 import os, shutil
+import unicodedata, re
 
-def mkDir(path):
+def mkDir(path,prnt=True):
     if os.path.isdir(path): return
     try:
         os.mkdir(path)
     except OSError:
         print ("Creation of the directory %s failed" % path)
     else:
-        print (" Successfully created the directory %s " % path)
+        if prnt: print (" Successfully created the directory %s " % path)
 
 def dirList(directory, ext="", recursive=True):
     lst = list()
@@ -50,11 +51,19 @@ def getFileName(fp,rmExt=True):
 def getFileDir(fp):
     return os.path.dirname(os.path.realpath(fp))
 
-def readFloats(fp):
-    with open(fp) as f:
-        return [float(x) for x in f]
-
-def readIntFloats(fp, delim='\t'):
-    with open(fp) as f:
-        lines = (line.split(delim) for line in f)
-        return dict((int(k), float(v)) for k, v in lines)        
+def fileNameClean(fp, allow_unicode=False):
+    # from https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    fp = str(fp)
+    if allow_unicode:
+        fp = unicodedata.normalize('NFKC', fp)
+    else:
+        fp = unicodedata.normalize('NFKD', fp).encode('ascii', 'ignore').decode('ascii')
+    fp = re.sub(r'[^\w\s-]', '', fp.lower())
+    return re.sub(r'[-\s]+', '-', fp).strip('-_')    

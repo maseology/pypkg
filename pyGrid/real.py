@@ -24,14 +24,21 @@ class REAL:
             self.gd = gd
         
         aa = np.fromfile(fp,dtyp) #.reshape(gd.na)
-        if len(aa) != len(self.gd.crc):
+        if fp[-3:]=='bil':
+            if len(aa) != self.gd.nrow*self.gd.ncol:
                 print('REAL.__init__ incorrect grid definition')
-                print(str(len(aa)) + " " + str(len(self.gd.crc)))
+                print(str(len(aa)) + " " + str(self.gd.nrow*self.gd.ncol))
                 quit()
-        self.x = dict(zip(self.gd.crc.keys(),aa))
-        self.a = {}
-        for k, v in self.x.items():
-            self.a.setdefault(v, []).append(k)
+            self.x = dict(zip(np.arange(self.gd.nrow*self.gd.ncol),aa))
+
+        else:
+            if len(aa) != len(self.gd.crc):
+                    print('REAL.__init__ incorrect grid definition')
+                    print(str(len(aa)) + " " + str(len(self.gd.crc)))
+                    quit()
+            self.x = dict(zip(self.gd.crc.keys(),aa))
+            self.a = {}
+            for k, v in self.x.items(): self.a.setdefault(v, []).append(k)
         
     def saveAs(self,fp): 
         if fp[-3:] in ["png","bmp"]:

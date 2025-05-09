@@ -3,10 +3,10 @@ import os, math
 import numpy as np
 import shapefile
 from pymmio import files as mmio
-# from pymmio import ascii
-# from pyGrid.indx import INDX
+from pymmio import ascii
+from pyGrid.indx import INDX
 # from pyGrid.real import REAL
-# from pyGrid.hdem import HDEM
+from pyGrid.hdem import HDEM
 from pyproj import Proj
 from tqdm import tqdm
 
@@ -29,6 +29,7 @@ class Watershed:
     nam = dict() # swsid: name
     lak = dict() # is lake?
     gag = dict() # swsid: gauge name
+    gwz = dict() # swsid: groundwater zone
     haschans = False # True if channel parameters are specified
     info = dict()
 
@@ -41,6 +42,7 @@ class Watershed:
             self.nam = dict()
             self.lak = dict()
             self.gag = dict()
+            self.gwz = dict()
             self.info = dict()
             return
         
@@ -52,36 +54,112 @@ class Watershed:
         if mmio.getExtension(fp)=='.shp':
             sf = shapefile.Reader(fp)
             geom = sf.shapes()
-            # feld = sf.fields # see field names
+            # fld = sf.fields # see field names
             attr = sf.records()
+            csws = dict()
             for i in range(len(geom)):
                 a = attr[i]
                 # print(a)
                 sid = int(a.SubId)
-                self.xr[sid] = hdem.gd.polygonToCellIDs(geom[i].points)
+                pcids = hdem.gd.polygonToCellIDs(geom[i].points)
+                for pc in pcids:
+                    if pc in csws:
+                        csws[pc].append(sid)
+                    else:
+                        csws[pc] = [sid]
+                self.xr[sid] = [int(pc) for pc in pcids]
                 self.t[sid] = int(a.DowSubId)
                 self.nam[sid] = a.rvhName
                 self.gag[sid] = a.gauge
+                self.gwz[sid] = ""
+                self.lak[sid] = False
                 if hasattr(a, 'lake'): self.lak[sid] = a.lake != 0
+                if hasattr(a, 'gwzone'): self.gwz[sid] = a.gwzone
                 if hasattr(a, 'strahler'): ord[sid] = a.strahler
                 if hasattr(a, 'wchan'): chanwidth[sid] = a.wchan
                 if hasattr(a, 'wflood'): valleywidth[sid] = a.wflood
                 if hasattr(a, 'nchan'): chanrough[sid] = a.nchan
                 if hasattr(a, 'nflood'): floodplrough[sid] = a.nflood
                 # print(len(self.xr[sid])*hdem.gd.cs*hdem.gd.cs/1000000)
+
+            # the gd.polygonToCellIDs function can cause overlap where 2 adjacent polygons are assigned the same cell
+            for c, sids in csws.items():
+                if len(sids)<2: continue
+                cmin, smin = 2**63-1 , -1
+                for sid in sids:
+                    if len(self.xr[sid]) < cmin:
+                        cmin = len(self.xr[sid])
+                        smin = sid
+                for sid in sids:
+                    if sid==smin: continue
+                    self.xr[sid].remove(c)
+                                    
             if not os.path.exists(fp+'-swsid.bil'):
                 out = np.full(hdem.gd.ncol*hdem.gd.nrow,-9999)
                 for sid, cids in self.xr.items():
                     for c in cids: out[c]=sid
                 hdem.gd.saveBinaryInt(fp+'-swsid.bil',out)
+        elif mmio.getExtension(fp)=='.bil':
+            if type(hdem) is HDEM:
+                idx = INDX(fp,hdem.gd)
+
+                if selection != None:
+                    if type(selection) is list:
+                        self.xr = { k: idx.a[k] for k in selection } 
+                    elif type(selection) is set:
+                        self.xr = { k: idx.a[k] for k in selection }                 
+                    elif type(selection) is int:
+                        if hdem is None:
+                            print('error: sws selection type int requires an hdem')
+                            quit()                      
+                        lsel = set()
+                        for c in hdem.Climb(selection): lsel.add(idx.x[c])
+                        self.xr = { k: idx.a[k] for k in lsel }
+                        selection = list(lsel)
+                    else:
+                        print('error: sws selection type unknown')
+                        quit()                
+                else: 
+                    self.xr = idx.a
+
+                for sid in idx.a:
+                    self.nam[sid] = str(sid)
+                    self.gag[sid] = ""
+                    self.gwz[sid] = ""
+                    self.lak[sid] = False
+
+                topofp = mmio.removeExt(fp)+'-topo.csv'
+                if not os.path.exists(topofp): self.__writeTopo(topofp,idx,hdem)
+
+                if os.path.exists(topofp):
+                    for ln in ascii.readCSV(topofp):
+                        sid = int(ln[0])
+                        dsid = int(ln[1])
+                        # dcid = int(ln[2])
+                        if selection != None: 
+                            if not dsid in selection: continue
+                            # if not dcid in selection: continue
+                        self.t[sid] = dsid #(disd, dcid) # {from swsid: (to swsid, to cid)}
+                else:
+                    print('error: sws .topo not found')
+                    quit()
+
+                # check
+                for u,d in self.t.items():
+                    if d==-1:continue
+                    if d not in self.t:
+                        print("topo ERROR {}; {}".format(u,d))
+            else:    
+                print('error: sws.py input file {} unrecognized'.format(fp))
+                quit()
         else:
-            print('error: sws.py todo (look below)')
+            print('error: sws.py input file {} unrecognized'.format(fp))
             quit()
 
-        # if type(hdem) is REAL:
+        # elif type(hdem) is REAL:
         #     sf = shapefile.Reader(fp)
         #     geom = sf.shapes()
-        #     # feld = sf.fields # see field names
+        #     # fld = sf.fields # see field names
         #     attr = sf.records()
         #     for i in range(len(geom)):
         #         # print(attr[i])
@@ -98,49 +176,7 @@ class Watershed:
         #             for c in cids: out[c]=sid
         #         hdem.gd.saveBinaryInt(fp+'-swsid.bil',out)
         # elif type(hdem) is HDEM:
-        #     print(' loading ' + fp)
-        #     idx = INDX(fp,hdem.gd)
-        #     self.gd = hdem.gd
-        #     topofp = mmio.removeExt(fp)+'.topo'
-        #     if not os.path.exists(topofp): self.__writeTopo(topofp,idx,hdem)
-
-        #     if selection != None:
-        #         if type(selection) is list:
-        #             self.xr = { k: idx.a[k] for k in selection } 
-        #         elif type(selection) is set:
-        #             self.xr = { k: idx.a[k] for k in selection }                 
-        #         elif type(selection) is int:
-        #             if hdem is None:
-        #                 print('error: sws selection type int requires an hdem')
-        #                 quit()                      
-        #             lsel = set()
-        #             for c in hdem.Climb(selection): lsel.add(idx.x[c])
-        #             self.xr = { k: idx.a[k] for k in lsel }
-        #             selection = list(lsel)
-        #         else:
-        #             print('error: sws selection type unknown')
-        #             quit()                
-        #     else: 
-        #         self.xr = idx.a
-
-        #     if os.path.exists(topofp):
-        #         for ln in ascii.readCSV(topofp):
-        #             sid = int(ln[1])
-        #             dsid = int(ln[2])
-        #             # dcid = int(ln[2])
-        #             if selection != None: 
-        #                 if not dsid in selection: continue
-        #                 # if not dcid in selection: continue
-        #             self.t[sid] = dsid #(disd, dcid) # {from swsid: (to swsid, to cid)}
-        #     else:
-        #         print('error: sws .topo not found')
-        #         quit()
-
-        #     # # check
-        #     # for u,d in self.t.items():
-        #     #     if d==-1:continue
-        #     #     if d not in self.t:
-        #     #         print("topo ERROR {}; {}".format(u,d))
+        ## pass
         # else:
         #     print('watershed.__init__ error: unknown dem type:',type(hdem))
         #     quit()
@@ -177,14 +213,14 @@ class Watershed:
             if sel != None: 
                 if not k in sel: continue
             n = 0
-            sx = 0.0
-            sy = 0.0
-            sz = 0.0
-            sg = 0.0
+            sx = 0.
+            sy = 0.
+            sz = 0.
+            sg = 0.
             sgn = 0
-            sax = 0.0
-            say = 0.0
-            sca = 0.0
+            sax = 0.
+            say = 0.
+            sca = 0.
 
             for cid in v:
                 sca += ca
@@ -275,6 +311,8 @@ class Watershed:
                 out.nam[uw] = self.nam[uw]
                 out.lak[uw] = self.lak[uw]
                 out.gag[uw] = self.gag[uw]
+                out.gwz[uw] = self.gwz[uw]
+                if uw in self.info: out.info[uw] = self.info[uw]
                 out.haschans = self.haschans
         elif type(wid)==list:
              for w in wid:
@@ -284,6 +322,8 @@ class Watershed:
                 out.nam[w] = self.nam[w]
                 out.lak[w] = self.lak[w]
                 out.gag[w] = self.gag[w]
+                out.gwz[w] = self.gwz[w]
+                if w in self.info: out.info[w] = self.info[w]
                 out.haschans = self.haschans           
         return out
 

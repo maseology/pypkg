@@ -15,6 +15,15 @@ def readInts(filepath):
         lout.append(int(ln))
     return(lout)        
 
+def readFloats(fp):
+    with open(fp) as f:
+        return [float(x) for x in f]
+
+def readIntFloats(fp, delim='\t'):
+    with open(fp) as f:
+        lines = (line.split(delim) for line in f)
+        return dict((int(k), float(v)) for k, v in lines)        
+
 def readCSV(filepath):
     with open(filepath) as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')

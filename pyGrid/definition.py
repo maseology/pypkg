@@ -10,13 +10,6 @@ from tqdm import tqdm
 
 
 class GDEF:
-    # xul=0.
-    # yul=0.
-    # rot=0.
-    # nrow=0
-    # ncol=0
-    # cs=0.
-    # unif=False
 
     def __init__(self, filepath=None, prnt=True):
         if filepath==None: return
@@ -35,17 +28,22 @@ class GDEF:
                     self.xul=float(f.readline()) # UL corner
                     self.yul=float(f.readline()) # UL corner
                     self.rot=float(f.readline())
+                    if self.rot!=0.0: print(' rotated gdef currently unsupported')
                     self.nrow=int(f.readline())
                     self.ncol=int(f.readline())
                     cs=f.readline()
-                    if chr(cs[0])=='U': self.unif=True
+                    if chr(cs[0])=='U': 
+                        self.unif=True
+                        self.cs=float(cs[1:])
+                        self.extent = (self.xul, self.yul-self.nrow*self.cs, self.xul+self.ncol*self.cs, self.yul) # (xmin, ymin, xmax, ymax)
+                    else:
+                        self.unif=False
+                        cy, cx = [float(cs)], list()
+                        for _ in range(self.nrow-1): cy.append(float(f.readline()))
+                        for _ in range(self.ncol): cx.append(float(f.readline())) 
+                        self.cs=[cx, cy]
+                        self.extent = (self.xul, self.yul-float(np.sum(cy)), self.xul+float(np.sum(cx)), self.yul) # (xmin, ymin, xmax, ymax)
                     
-                    self.cs=float(cs[1:])
-
-                    if self.rot!=0.0: print(' rotated gdef currently unsupported')
-                    if not self.unif: print(' variable cell size currently unsupported')
-
-                    self.extent = (self.xul, self.yul-self.nrow*self.cs, self.xul+self.ncol*self.cs, self.yul) # (xmin, ymin, xmax, ymax)
                     bact = f.read()
                     if bact == b'':
                         self.active=False
@@ -94,10 +92,17 @@ class GDEF:
         self.crc = dict(zip(cids,rcs))
 
         gco = np.array(np.meshgrid(range(self.ncol), range(self.nrow),indexing='xy'),float) # coordinate grid
-        gco[0, :, :] *= self.cs  # cols/ec -- coordinate transformation (from https://bic-berkeley.github.io/psych-214-fall-2016/numpy_meshgrid.html)
-        gco[1, :, :] *= -self.cs # rows/nc
-        gco[0, :, :] += self.xul + self.cs/2. # cols/ec
-        gco[1, :, :] += self.yul - self.cs/2. # rows/nc
+        if self.unif:
+            gco[0, :, :] *= self.cs  # cols/ec -- coordinate transformation (from https://bic-berkeley.github.io/psych-214-fall-2016/numpy_meshgrid.html)
+            gco[1, :, :] *= -self.cs # rows/nc
+            gco[0, :, :] += self.xul + self.cs/2. # cols/ec
+            gco[1, :, :] += self.yul - self.cs/2. # rows/nc
+        else:
+            ix = np.insert(np.cumsum(self.cs[0][:-1]),0,0.) + self.xul + np.array(self.cs[0])/2 #+ self.xul 
+            iy = np.insert(-np.cumsum(self.cs[1][:-1]),0,0.) + self.yul - np.array(self.cs[1])/2 #+ self.xul 
+            gco[0, :, :] = np.tile(ix, self.nrow).reshape((self.nrow,self.ncol))
+            gco[1, :, :] = np.repeat(iy,self.ncol).reshape((self.nrow,self.ncol))
+        
         self.cco = np.stack((gco[0, :, :],gco[1, :, :]),axis=2) # row-col to coord (self.cco.reshape(self.ncell,-1) # converting np.array to list of coordinate list)
 
         # # the naive approach is very slow:
@@ -110,6 +115,8 @@ class GDEF:
         #         self.cco[cid]=(self.xul+(j+0.5)*self.cs,self.yul-(i+0.5)*self.cs)
         #         cid+=1
         # self.ncell=cid
+        
+    def Centroid(self,cid): return self.cco[self.RowCol(cid)]
 
     def Centroids(self):
         return self.cco.reshape(self.nrow*self.ncol,-1)
@@ -142,47 +149,71 @@ class GDEF:
 
     def CellLeft(self,ir,jc):
         if self.rot != 0.0: print("definition.CellLeft error: rotation no supported")
-        return self.cco[ir][jc][0] - self.cs/2.0
+        if self.unif:
+            return float(self.cco[ir][jc][0] - self.cs/2.0)
+        else:
+            return float(self.cco[ir][jc][0] - self.cs[0][jc]/2.0)
 
     def CellRight(self,ir,jc):
         if self.rot != 0.0: print("definition.CellRight error: rotation no supported")
-        return self.cco[ir][jc][0] + self.cs/2.0
+        if self.unif:
+            return float(self.cco[ir][jc][0] + self.cs/2.0)
+        else:
+            return float(self.cco[ir][jc][0] + self.cs[0][jc]/2.0)
 
     def CellTop(self,ir,jc):
         if self.rot != 0.0: print("definition.CellTop error: rotation no supported")
-        return self.cco[ir][jc][1] + self.cs/2.0
+        if self.unif:
+            return float(self.cco[ir][jc][1] + self.cs/2.0)
+        else:
+            return float(self.cco[ir][jc][1] + self.cs[1][ir]/2.0)
 
     def CellBottom(self,ir,jc):
         if self.rot != 0.0: print("definition.CellBottom error: rotation no supported")
-        return self.cco[ir][jc][1] - self.cs/2.0     
+        if self.unif:
+            return float(self.cco[ir][jc][1] - self.cs/2.0)
+        else:
+            return float(self.cco[ir][jc][1] - self.cs[1][ir]/2.0)
 
     def pointToRowCol(self,xy):
         # xy: tuple
         if self.rot != 0: pass # TODO: rotate point like p.Rotate(_rotation, New Cartesian.XY(_origin.X, _origin.Y), True)
-        if xy[1] < self.yul-self.nrow*self.cs or xy[1] > self.yul or xy[0] < self.xul or xy[0] > self.xul+self.ncol*self.cs: return None #(-1,-1)
+        if self.unif:
+            if xy[1] < self.yul-self.nrow*self.cs or xy[1] > self.yul or xy[0] < self.xul or xy[0] > self.xul+self.ncol*self.cs: return None #(-1,-1)
+        else:
+            if xy[1] < self.yul-np.sum(self.cs[1]) or xy[1] > self.yul or xy[0] < self.xul or xy[0] > self.xul+np.sum(self.cs[0]): return None #(-1,-1)
         x = self.xul
         y = self.yul
         ir = -1
         jc = -1
 
-        while x < xy[0]:
-            jc += 1
-            x += self.cs
-        while y > xy[1]:
-            ir += 1
-            y -= self.cs
-        return (ir,jc)
+        if self.unif:
+            while x < xy[0]:
+                jc += 1
+                x += self.cs
+            while y > xy[1]:
+                ir += 1
+                y -= self.cs
+            return (ir,jc)
+        else:
+            while x < xy[0]:
+                jc += 1
+                x += self.cs[0][jc]
+            while y > xy[1]:
+                ir += 1
+                y -= self.cs[1][ir]
+            return (ir,jc)
 
     def pointToCellID(self,xy):
         p = self.pointToRowCol(xy)
-        if p is not None: return self.rcc[p]
+        if p is not None: return int(self.rcc[p])
 
     def pointsToCellIDs(self,xys):
         # xys: dict of int,tuple
         dout = {}
         for k, v in xys.items():
             p = self.pointToRowCol(v)
-            if p is not None: dout[k] = self.rcc[p] # != (-1,-1)
+            if p is not None: dout[k] = int(self.rcc[p]) # != (-1,-1)
         return dout # pointID{cellID}
     
     def polygonToCellIDs(self,polygon):
