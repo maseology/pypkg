@@ -1,6 +1,6 @@
 import math
-from scipy.signal import lfilter
 import numpy as np
+# from scipy.signal import lfilter
 from scipy.signal.signaltools import lfilter
 from scipy.stats import linregress
 from datetime import timedelta
@@ -185,10 +185,85 @@ def clarifica(v):
 
 
 ########################################################
+# Hugh Whiteley baseflow separation technique
 # returns grand estimate of baseflow
 ########################################################
-def whiteley(v):
-    pass
+def whiteley(v, careaKM2):
+    vv = v.copy()
+
+    # parameters
+    eproportion = .1
+    emax = 5. # mm/d max evap rate
+    annualRecharge = 300. # mm
+    erf = np.repeat(2.,len(v.index)) # adjustable seasonal adjustment factor
+    trans1 = .7
+    trans2 = .7
+    trans3 = .7
+    # trans4 = 1.
+    s1 = 15. # mm
+    s2 = 25. # mm
+    s3 = 30. # mm
+    # s4 = 40. # mm
+    s1_0 = 5.432137328 # mm
+    s2_0 = 10.93665140 # mm
+    s3_0 = 10.59307575 # mm
+    s4_0 = 9.859065448 # mm
+    nk1 = 6. # days
+    nk2 = 15. # days
+    nk3 = 35. # days
+    nk4 = 85. # days
+
+
+    # model
+    vv['doy'] = vv.index.dayofyear
+    vv['Kd'] = -1/np.log(vv.Val/vv.Val.shift(1))
+    vv['peak'] = np.where((vv.Kd<0) & (vv.Kd.shift(-1)>0),vv.Val,0)
+    sumpeak = np.sum(vv.peak)
+    vv['erf'] = erf # adjustable seasonal adjustment factor 
+
+    vv['recharge'] = vv.peak/sumpeak*vv.erf*annualRecharge
+    vv['distrech'] = (vv.recharge+vv.recharge.shift(-1)+vv.recharge.shift(-2))/3
+
+    def computQbase(distRech):
+        fa = careaKM2*1000./86400.
+        s1t = s1_0
+        s2t = s2_0
+        s3t = s3_0
+        s4t = s4_0
+        r1 = np.repeat(0.,len(distRech))
+        r2 = np.repeat(0.,len(distRech))
+        r3 = np.repeat(0.,len(distRech))
+        r4 = np.repeat(0.,len(distRech))
+        qb = np.repeat(0.,len(distRech))
+        for i in range(1, len(distRech)):
+            r1[i] = distRech[i]*trans1*(1.-np.sin(np.pi*s1t/s1/2.))
+            q1 = s1t*fa/nk1
+            s1t += r1[i]-q1/fa
+            r2[i] = (distRech[i-1]-r1[i-1])*trans2*(1.-np.sin(np.pi*s2t/s2/2.))
+            q2 = s2t*fa/nk2
+            s2t += r2[i]-q2/fa    
+            if i>1: r3[i] = (distRech[i-2]-r1[i-2]-r2[i-1])*trans3*(1.-np.sin(np.pi*s3t/s3/2.))
+            q3 = s3t*fa/nk3
+            s3t += r3[i]-q3/fa
+            if i>2: r4[i] = (distRech[i-3]-r1[i-3]-r2[i-2]-r3[i-1])
+            q4 = s4t*fa/nk4
+            s4t += r4[i]-q4/fa
+            qb[i] = q1+q2+q3+q4
+        return qb
+
+    vv['Qbase'] = computQbase(np.nan_to_num(vv.distrech)) # m3/s
+
+    def computChnEvap(doy): 
+        ev = careaKM2*eproportion*emax/86.4*np.sin(np.pi*(doy-121)/(300-120))
+        if ev<0: ev=0
+        return ev
+
+    vv['chanEvap'] = np.vectorize(computChnEvap)(vv.doy)
+    vv['chanBase'] = (vv.Qbase-vv.chanEvap).clip(lower=0)
+
+    return vv
+
+
 
 
 ########################################################
@@ -250,13 +325,13 @@ def estimateBaseflow(df, dakm2, k):
 
     # Institute of Hydrology, 1980. Low Flow Studies report. Wallingford, UK.
     # Piggott, A.R., S. Moin, C. Southam, 2005. A revised approach to the UKIH method for the calculation of baseflow. Hydrological Sciences Journal 50(5): 911-920.
-    uk = ukih(df, N)
+    uk = ukih(df.copy(), N)
     dfo['sweepingMin'] = uk['sweepingMin']
     dfo['sweepingMax'] = uk['sweepingMax']
     dfo['sweepingMedian'] = uk['sweepingMedian']
 
     # Sloto, R.A. and M.Y. Crouse, 1996. HYSEP: A Computer Program for Streamflow Hydrograph Separation and Analysis U.S. Geological Survey Water-Resources Investigations Report 96-4040.
-    sc = hysep(df, N)
+    sc = hysep(df.copy(), N)
     dfo['fixedInterval'] = sc['FI']
     dfo['slidingInterval'] = sc['SI']
     dfo['localMinimum'] = sc['LM']
@@ -269,6 +344,9 @@ def estimateBaseflow(df, dakm2, k):
 
     # Clarifica Inc., 2002. Water Budget in Urbanizing Watersheds: Duffins Creek Watershed. Report prepared for the Toronto and Region Conservation Authority.
     dfo['Clarifica'] = clarifica(df[['Val']])
+
+    # # Hugh Whiteley baseflow separation technique
+    # dfo['Whiteley'] = whiteley(df.copy(),dakm2)[['chanBase']]
 
     nc = len(dfo.columns)
     dfo['min'] = dfo.iloc[:,1:nc].min(axis=1)
