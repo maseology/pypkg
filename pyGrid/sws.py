@@ -62,12 +62,15 @@ class Watershed:
                 # print(a)
                 sid = int(a.SubId)
                 pcids = hdem.gd.polygonToCellIDs(geom[i].points)
+                acids = list()
                 for pc in pcids:
+                    if not pc in hdem.gd.crc: continue
+                    acids.append(pc)
                     if pc in csws:
                         csws[pc].append(sid)
                     else:
                         csws[pc] = [sid]
-                self.xr[sid] = [int(pc) for pc in pcids]
+                self.xr[sid] = [int(pc) for pc in acids]
                 self.t[sid] = int(a.DowSubId)
                 self.nam[sid] = a.rvhName
                 self.gag[sid] = a.gauge
@@ -182,6 +185,7 @@ class Watershed:
         #     quit()
 
         self.__buildSWS(hdem, selection, epsg)
+
         for t in self.xr:
             if t in chanwidth: 
                 self.s[t].chanwidth = chanwidth[t]
@@ -194,6 +198,8 @@ class Watershed:
             if t in valleywidth: self.s[t].valleywidth = valleywidth[t]
             if t in chanrough: self.s[t].chanrough = chanrough[t]
             if t in floodplrough: self.s[t].floodplrough = floodplrough[t]
+
+
 
 
     def __buildSWS(self, hdem, sel, epsg):        
@@ -223,6 +229,7 @@ class Watershed:
             sca = 0.
 
             for cid in v:
+                # if not cid in hdem.gd.crc: continue
                 sca += ca
                 i,j = hdem.gd.crc[cid]
                 cc = hdem.gd.cco[i][j]

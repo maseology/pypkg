@@ -139,12 +139,23 @@ class GDEF:
     def ActiveMask(self): return np.array(self.Actives(), np.int32).reshape(self.shape()) != 0
 
     def setActives(self, actives):
-        self.act = actives # np.array(actives.tolist())[:self.nrow*self.ncol].reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
+        if type(actives)==list:
+            index_array = np.array(actives)
+            self.act = np.zeros(self.nrow*self.ncol, dtype=bool)
+            self.act[index_array] = True
+            self.act = self.act.reshape(self.nrow,self.ncol)
+        elif type(actives)==bitarray:
+            self.act = np.array(actives.tolist())[:self.nrow*self.ncol].reshape((self.nrow,self.ncol)) # active cell bitarray to 2D boolean array
+        elif type(actives)==np.ndarray:
+            self.act = actives
+        else:
+            print("gdef.setActives unknown type: ", type(actives))
+            return
         self.active = True        
         self.build()
 
     def removeActives(self):
-        self.active = False        
+        self.active = False
         self.build()
 
     def CellLeft(self,ir,jc):
