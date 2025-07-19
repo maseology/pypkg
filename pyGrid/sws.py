@@ -29,7 +29,7 @@ class Watershed:
     nam = dict() # swsid: name
     lak = dict() # is lake?
     gag = dict() # swsid: gauge name
-    gwz = dict() # swsid: groundwater zone
+    zon = dict() # swsid: hydrologic "zone" ID (groundwater, physiographic, etc.)
     haschans = False # True if channel parameters are specified
     info = dict()
 
@@ -42,7 +42,7 @@ class Watershed:
             self.nam = dict()
             self.lak = dict()
             self.gag = dict()
-            self.gwz = dict()
+            self.zon = dict()
             self.info = dict()
             return
         
@@ -73,11 +73,12 @@ class Watershed:
                 self.xr[sid] = [int(pc) for pc in acids]
                 self.t[sid] = int(a.DowSubId)
                 self.nam[sid] = a.rvhName
-                self.gag[sid] = a.gauge
-                self.gwz[sid] = ""
+                self.gag[sid] = ""
+                self.zon[sid] = ""
                 self.lak[sid] = False
+                if hasattr(a, 'gauge'): self.gag[sid] = a.gauge
                 if hasattr(a, 'lake'): self.lak[sid] = a.lake != 0
-                if hasattr(a, 'gwzone'): self.gwz[sid] = a.gwzone
+                if hasattr(a, 'zone'): self.zon[sid] = a.zone
                 if hasattr(a, 'strahler'): ord[sid] = a.strahler
                 if hasattr(a, 'wchan'): chanwidth[sid] = a.wchan
                 if hasattr(a, 'wflood'): valleywidth[sid] = a.wflood
@@ -128,7 +129,7 @@ class Watershed:
                 for sid in idx.a:
                     self.nam[sid] = str(sid)
                     self.gag[sid] = ""
-                    self.gwz[sid] = ""
+                    self.zon[sid] = ""
                     self.lak[sid] = False
 
                 topofp = mmio.removeExt(fp)+'-topo.csv'
@@ -318,7 +319,7 @@ class Watershed:
                 out.nam[uw] = self.nam[uw]
                 out.lak[uw] = self.lak[uw]
                 out.gag[uw] = self.gag[uw]
-                out.gwz[uw] = self.gwz[uw]
+                out.zon[uw] = self.zon[uw]
                 if uw in self.info: out.info[uw] = self.info[uw]
                 out.haschans = self.haschans
         elif type(wid)==list:
@@ -329,7 +330,7 @@ class Watershed:
                 out.nam[w] = self.nam[w]
                 out.lak[w] = self.lak[w]
                 out.gag[w] = self.gag[w]
-                out.gwz[w] = self.gwz[w]
+                out.zon[w] = self.zon[w]
                 if w in self.info: out.info[w] = self.info[w]
                 out.haschans = self.haschans           
         return out
