@@ -68,12 +68,16 @@ class REAL:
         
         sxs, rgs = dict(), dict()
         for cid,e0 in self.x.items():
+            if e0 < -998: 
+                sxs[cid], rgs[cid] = 0., -9999.
+                continue
             sx, rx, kx = 0., -9999, -1
             for k in range(8):
                 c1, c2 = cid+re1[k]*ncol+ce1[k], cid+re2[k]*ncol+ce2[k]
                 if not c1 in self.x: continue
                 if not c2 in self.x: continue
                 e1, e2 = self.x[c1], self.x[c2]
+                if e1 < -998 or e2 < -998: continue
                 if e1 > e0 and e2 > e0: continue
 
                 s1 = (e0 - e1) / cw

@@ -14,8 +14,8 @@ from tqdm import tqdm
 class SWS:
     km2 = 1.
     elv = 0.0
-    ylat = 48.0
-    xlng = -81.0
+    ylat = 44.0
+    xlng = -80.0
     slp = 0.0
     asp = 0.0
     rchlen = 0.0
@@ -255,7 +255,7 @@ class Watershed:
                 ss.slp = 0.
                 ss.asp = 0.
             else:
-                ss.slp = math.atan(sg/sgn) # rad
+                ss.slp = math.atan(sg/sgn) # radians
                 ss.asp = (math.atan2(sax/sgn,say/sgn) + 2 * np.pi) % (2 * np.pi) # [0 to 2Pi] (raven requires [0 to 2Pi] over [-Pi to Pi])
             ss.rchlen = math.sqrt(n*ca*1e-6)
             self.s[k] = ss
