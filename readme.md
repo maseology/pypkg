@@ -1,3 +1,3 @@
 # pypkg
 
-a set of personal python modules
+a set of personal python modules I use professionally
