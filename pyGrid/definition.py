@@ -28,7 +28,7 @@ class GDEF:
                     self.xul=float(f.readline()) # UL corner
                     self.yul=float(f.readline()) # UL corner
                     self.rot=float(f.readline())
-                    if self.rot!=0.0: print(' rotated gdef currently unsupported')
+                    if self.rot!=0.0: print(' WARNING: rotated definitions currently unsupported')
                     self.nrow=int(f.readline())
                     self.ncol=int(f.readline())
                     cs=f.readline()

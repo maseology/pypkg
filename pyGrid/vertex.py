@@ -1,12 +1,13 @@
 
 
 class VDEF:
-    nodecoord = dict()
-    cellnodes = dict() # references nodes connected to each cell
-    nodecells = dict() # references cells associated with each node
 
     def __init__(self, gdef=None):
         if gdef is None: return
+
+        self.nodecoord = dict()
+        self.cellnodes = dict() # references nodes connected to each cell
+        self.nodecells = dict() # references cells associated with each node
 
         #  collects cell IDs surrounding grid intersections
         #  EXAMPLE: 4x5 cells (5x6 nodes)
@@ -60,9 +61,9 @@ class VDEF:
             self.nodecells[self.cellnodes[cid][2]][0] = cid
             self.nodecells[self.cellnodes[cid][3]][3] = cid
 
-    def adjacentCells(self, cardinalOnly=True):
+    def adjacentCells(self, sharedFacesOnly=True):
         d = dict()
-        if cardinalOnly:
+        if sharedFacesOnly:
             for eid, nids in self.cellnodes.items():
                 dd = dict()
                 for nid in nids:
@@ -76,7 +77,7 @@ class VDEF:
                     if cnt <3: continue
                     l.append(eid2)
                 d[eid] = l
-        else:
+        else: # taking any cell with shared node
             for eid, nids in self.cellnodes.items():
                 l = list()
                 for nid in nids: l.extend(self.nodecells[nid])
