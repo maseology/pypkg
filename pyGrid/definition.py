@@ -31,6 +31,7 @@ class GDEF:
                     if self.rot!=0.0: print(' WARNING: rotated definitions currently unsupported')
                     self.nrow=int(f.readline())
                     self.ncol=int(f.readline())
+                    self.shape = (self.nrow,self.ncol)
                     cs=f.readline()
                     if chr(cs[0])=='U': 
                         self.unif=True
@@ -275,7 +276,7 @@ class GDEF:
         return d
 
 
-    def shape(self): return (self.nrow,self.ncol)
+    # def shape(self): return (self.nrow,self.ncol) # deprecated, shape is now a parameter
 
 
     def contains(self,x,y,buffer=0):
