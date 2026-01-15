@@ -137,7 +137,7 @@ class GDEF:
 
     def ActiveIDs(self): return np.arange(self.nrow*self.ncol)[self.act.reshape(self.nrow*self.ncol)>0]
 
-    def ActiveMask(self): return np.array(self.Actives(), np.int32).reshape(self.shape()) != 0
+    def ActiveMask(self): return np.array(self.Actives(), np.int32).reshape(self.shape) != 0
 
     def setActives(self, actives):
         if type(actives)==list:
@@ -347,7 +347,12 @@ class GDEF:
     #     elif ext == 'bil':
     #         return np.fromfile(file, datatype).reshape(self.nrow,self.ncol,nbands)
 
-    def nullArray(self, val): return(np.ones((self.nrow,self.ncol))*val)
+    def nullArray(self, val): 
+        if isinstance(val, (int, np.integer)):
+            return np.ones((self.nrow,self.ncol),dtype=np.int32)*val
+        if isinstance(val, (float, np.floating)):
+            return np.ones((self.nrow,self.ncol),dtype=np.int32)*val
+        raise SystemExit(' ⚠️definition.nullArray: unknown type')
 
     ### INTERPOLATION
 
@@ -434,7 +439,7 @@ class GDEF:
         fn, ext = os.path.splitext(fp)
         if ext==".bil": self.toHDR(fn+'.hdr',pixeltype='SIGNEDINT32')
         if type(dat)==dict:
-            a = np.full(self.shape(),-9999,dtype=np.int32)
+            a = np.full(self.shape,-9999,dtype=np.int32)
             for cid,v in dat.items(): a[self.RowCol(cid)] = np.int32(v)
             if os.path.exists(fp): os.remove(fp)
             a.tofile(fp) # always saved in C-order (row-major)
@@ -452,7 +457,7 @@ class GDEF:
                 if os.path.exists(fp): os.remove(fp)
                 a.tofile(fp)
             elif ext==".bil":
-                a = np.full(self.shape(),-9999.0,dtype=np.float32)
+                a = np.full(self.shape,-9999.0,dtype=np.float32)
                 for cid,v in dat.items(): a[self.RowCol(cid)] = v
                 if os.path.exists(fp): os.remove(fp)
                 a.tofile(fp) # always saved in C-order (row-major)
@@ -464,7 +469,7 @@ class GDEF:
 
     def saveBitmap(self,fp,dat):
         if type(dat)==dict:
-            a = np.full(self.shape(),-9999.0,dtype=np.float32)
+            a = np.full(self.shape,-9999.0,dtype=np.float32)
             for cid,v in dat.items(): a[self.RowCol(cid)] = v
             if os.path.exists(fp): os.remove(fp)
             img = Image.fromarray(a)
