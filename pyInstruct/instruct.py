@@ -14,6 +14,7 @@ class build():
     params = dict()
 
     def __init__(self, filepath):
+        if filepath is None: return
         self.__read(filepath)
         self.params =  {k.lower(): v for k, v in self.params.items()} # converting all to lower case
         for k, v in self.params.items():

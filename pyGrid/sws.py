@@ -13,12 +13,12 @@ from tqdm import tqdm
 
 class SWS:
     km2 = 1.
-    elv = 0.0
-    ylat = 44.0
-    xlng = -80.0
-    slp = 0.0
-    asp = 0.0
-    rchlen = 0.0
+    elv = 0.
+    ylat = 44.
+    xlng = -80.
+    slp = 0.
+    asp = 0.
+    rchlen = 0.
 
 
 class Watershed:

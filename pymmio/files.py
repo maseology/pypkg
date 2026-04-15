@@ -51,7 +51,7 @@ def getFileName(fp,rmExt=True):
 def getFileDir(fp):
     return os.path.dirname(os.path.realpath(fp))
 
-def fileNameClean(fp, allow_unicode=False):
+def fileNameClean(fp, lower_case=True, allow_unicode=False):
     # from https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
     """
     Taken from https://github.com/django/django/blob/master/django/utils/text.py
@@ -65,5 +65,8 @@ def fileNameClean(fp, allow_unicode=False):
         fp = unicodedata.normalize('NFKC', fp)
     else:
         fp = unicodedata.normalize('NFKD', fp).encode('ascii', 'ignore').decode('ascii')
-    fp = re.sub(r'[^\w\s-]', '', fp.lower())
+
+    if lower_case: fp = fp.lower()
+    fp = re.sub(r'[^\w\s-]', '', fp)
+
     return re.sub(r'[-\s]+', '-', fp).strip('-_')    
