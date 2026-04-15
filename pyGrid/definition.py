@@ -103,6 +103,16 @@ class GDEF:
             iy = np.insert(-np.cumsum(self.cs[1][:-1]),0,0.) + self.yul - np.array(self.cs[1])/2 #+ self.xul 
             gco[0, :, :] = np.tile(ix, self.nrow).reshape((self.nrow,self.ncol))
             gco[1, :, :] = np.repeat(iy,self.ncol).reshape((self.nrow,self.ncol))
+
+        if self.rot != 0.:
+            c = np.cos(self.rot)
+            s = np.sin(self.rot)
+            x = gco[0, :, :]
+            y = gco[1, :, :]
+            dx = x - self.xul
+            dy = y - self.yul
+            gco[0, :, :] = self.xul + c * dx - s * dy
+            gco[1, :, :] = self.yul + s * dx + c * dy
         
         self.cco = np.stack((gco[0, :, :],gco[1, :, :]),axis=2) # row-col to coord (self.cco.reshape(self.ncell,-1) # converting np.array to list of coordinate list)
 
@@ -117,6 +127,13 @@ class GDEF:
         #         cid+=1
         # self.ncell=cid
         
+    def LowerLeftCoordinates(self): 
+        # 2---1
+        # | n |
+        # 3---0        
+        xs, ys =  self.CellVertices(0,self.ncol-1)
+        return (xs[3],ys[3])
+
     def Centroid(self,cid): return self.cco[self.RowCol(cid)]
 
     def Centroids(self):
@@ -159,6 +176,38 @@ class GDEF:
         self.active = False
         self.build()
 
+    def CellVertices(self,ir,jc):
+        xdsc = np.array(self.cs[0])
+        ydsc = np.array(self.cs[1])
+
+        x0 = xdsc[:jc].sum()
+        x1 = x0 + xdsc[jc]
+
+        y0 = -ydsc[:ir].sum()
+        y1 = y0 - ydsc[ir]
+
+        # Corners in local coords: LR, UR, UL, LL
+        # 2---1
+        # | n |
+        # 3---0        
+        # X = np.array([x0, x1, x1, x0], dtype=float) # UL, UR, LR, LL
+        # Y = np.array([y0, y0, y1, y1], dtype=float)
+        X = np.array([x1, x1, x0, x0], dtype=float)
+        Y = np.array([y1, y0, y0, y1], dtype=float)
+
+        if self.rot != 0.0:
+            c = np.cos(self.rot)
+            s = np.sin(self.rot)
+            # rotate about UL origin (0,0) in local space, then shift to world
+            Xr = c * X - s * Y
+            Yr = s * X + c * Y
+        else:
+            Xr, Yr = X, Y
+
+        xw = self.xul + Xr
+        yw = self.yul + Yr
+        return xw, yw  # arrays length 4
+
     def CellLeft(self,ir,jc):
         if self.rot != 0.0: print("definition.CellLeft error: rotation no supported")
         if self.unif:
@@ -167,25 +216,25 @@ class GDEF:
             return float(self.cco[ir][jc][0] - self.cs[0][jc]/2.0)
 
     def CellRight(self,ir,jc):
-        if self.rot != 0.0: print("definition.CellRight error: rotation no supported")
+        if self.rot != 0.: print("definition.CellRight error: rotation no supported")
         if self.unif:
-            return float(self.cco[ir][jc][0] + self.cs/2.0)
+            return float(self.cco[ir][jc][0] + self.cs/2.)
         else:
-            return float(self.cco[ir][jc][0] + self.cs[0][jc]/2.0)
+            return float(self.cco[ir][jc][0] + self.cs[0][jc]/2.)
 
     def CellTop(self,ir,jc):
-        if self.rot != 0.0: print("definition.CellTop error: rotation no supported")
+        if self.rot != 0.: print("definition.CellTop error: rotation no supported")
         if self.unif:
-            return float(self.cco[ir][jc][1] + self.cs/2.0)
+            return float(self.cco[ir][jc][1] + self.cs/2.)
         else:
-            return float(self.cco[ir][jc][1] + self.cs[1][ir]/2.0)
+            return float(self.cco[ir][jc][1] + self.cs[1][ir]/2.)
 
     def CellBottom(self,ir,jc):
-        if self.rot != 0.0: print("definition.CellBottom error: rotation no supported")
+        if self.rot != 0.: print("definition.CellBottom error: rotation no supported")
         if self.unif:
-            return float(self.cco[ir][jc][1] - self.cs/2.0)
+            return float(self.cco[ir][jc][1] - self.cs/2.)
         else:
-            return float(self.cco[ir][jc][1] - self.cs[1][ir]/2.0)
+            return float(self.cco[ir][jc][1] - self.cs[1][ir]/2.)
 
     def pointToRowCol(self,xy):
         # xy: tuple
